@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "ScopeGuard",
+      "url": "https://atalovesyou.github.io/scopeguard/",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "AI scope creep detector for freelancers. Analyze client messages against your contract and catch scope creep before it costs you.",
+      "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+      },
+      "publisher": {
+            "@type": "Organization",
+            "name": "OpenSphere Labs",
+            "url": "https://atalovesyou.github.io/opensphere-labs/"
+      }
+}
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScopeGuard — AI Scope Creep Detector for Freelancers</title>
+    <meta name="description" content="Catch scope creep before it costs you. Paste your contract, analyze client messages, get instant creep alerts. Freelancers save $6K-15K/year. Free to start.">
+    <meta property="og:title" content="ScopeGuard — AI Scope Creep Detector">
+    <meta property="og:description" content="73% of freelancers lose money to scope creep. ScopeGuard analyzes client messages against your contract and flags out-of-scope requests instantly.">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ScopeGuard — AI Scope Creep Detector">
+    <meta name="twitter:description" content="AI-powered scope creep detection. Paste contract + client message → instant creep score. Save $6K-15K/year.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-text { background: linear-gradient(135deg, #f97316, #fb923c, #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08); }
+        .glow { box-shadow: 0 0 40px rgba(249,115,22,0.15); }
+        .creep-high { border-left: 3px solid #ef4444; background: rgba(239,68,68,0.08); }
+        .creep-medium { border-left: 3px solid #f59e0b; background: rgba(245,158,11,0.08); }
+        .creep-low { border-left: 3px solid #22c55e; background: rgba(34,197,94,0.08); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(249,115,22,0.2); } 50% { box-shadow: 0 0 40px rgba(249,115,22,0.4); } }
+        .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+        .score-ring { transition: stroke-dashoffset 1s ease-out; }
+        textarea:focus { outline: none; border-color: rgba(249,115,22,0.5); box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+    </style>
+</head>
+<body class="bg-[#0a0a0f] text-gray-200 antialiased">
+
+    <!-- Nav -->
+    <nav class="fixed top-0 w-full z-50 bg-[#0a0a0f]/80 backdrop-blur-lg border-b border-white/5">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🛡️</span>
+                <span class="text-xl font-bold">Scope<span class="text-orange-400">Guard</span></span>
+            </div>
+            <div class="hidden md:flex items-center gap-8 text-sm text-gray-400">
+                <a href="#demo" class="hover:text-white transition">Demo</a>
+                <a href="#how" class="hover:text-white transition">How It Works</a>
+                <a href="#dashboard" class="hover:text-white transition">Dashboard</a>
+                <a href="#pricing" class="hover:text-white transition">Pricing</a>
+            </div>
+            <button onclick="document.getElementById('waitlist-section').scrollIntoView({behavior:'smooth'})" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                Join Waitlist
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="pt-32 pb-20 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <div class="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 rounded-full px-4 py-1.5 text-sm text-orange-300 mb-6">
+                <span class="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></span>
+                73% of freelancers lose $6K-15K/year to scope creep
+            </div>
+            <h1 class="text-5xl md:text-7xl font-extrabold tracking-tight mb-6">
+                Catch <span class="gradient-text">scope creep</span><br>before it costs you
+            </h1>
+            <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-10">
+                Paste your contract. Paste the client message. Get an instant creep score. ScopeGuard flags out-of-scope requests and gives you professional pushback scripts.
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3.5 rounded-xl text-lg font-semibold transition glow">
+                    Try the Demo ↓
+                </button>
+                <a href="#pricing" class="text-gray-400 hover:text-white px-6 py-3.5 transition">See pricing →</a>
+            </div>
+            <div class="mt-12 flex items-center justify-center gap-8 text-sm text-gray-500">
+                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> No signup needed</div>
+                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> 100% private (client-side)</div>
+                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> Instant results</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo -->
+    <section id="demo" class="py-20 px-6">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-3">Scope Creep Detector</h2>
+            <p class="text-gray-400 text-center mb-10">Paste your contract scope + a client message. See if it's scope creep.</p>
+
+            <div class="grid md:grid-cols-2 gap-6 mb-8">
+                <!-- Contract Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">📋 Your Contract Scope</label>
+                    <textarea id="contract-input" rows="8" placeholder="Paste your contract's scope section or SoW deliverables here..."
+                        class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder-gray-600 resize-none transition"></textarea>
+                </div>
+                <!-- Client Message -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">💬 Client Message</label>
+                    <textarea id="message-input" rows="8" placeholder="Paste the client's email, Slack message, or meeting notes here..."
+                        class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder-gray-600 resize-none transition"></textarea>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center gap-4 mb-8">
+                <button onclick="analyzeCreep()" class="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-semibold transition">
+                    🔍 Analyze for Scope Creep
+                </button>
+                <button onclick="loadExample()" class="bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 px-6 py-3 rounded-xl font-medium transition">
+                    Load Example
+                </button>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="hidden fade-in">
+                <!-- Score Card -->
+                <div class="glass rounded-2xl p-6 mb-6">
+                    <div class="flex flex-col md:flex-row items-center gap-8">
+                        <div class="relative">
+                            <svg width="140" height="140" viewBox="0 0 140 140">
+                                <circle cx="70" cy="70" r="60" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="10"/>
+                                <circle id="score-circle" cx="70" cy="70" r="60" fill="none" stroke="#22c55e" stroke-width="10"
+                                    stroke-dasharray="377" stroke-dashoffset="377" stroke-linecap="round"
+                                    transform="rotate(-90 70 70)" class="score-ring"/>
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="score-number" class="text-4xl font-extrabold">0</span>
+                                <span class="text-xs text-gray-400">CREEP SCORE</span>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <h3 id="verdict-title" class="text-2xl font-bold mb-2">Analyzing...</h3>
+                            <p id="verdict-desc" class="text-gray-400 mb-4"></p>
+                            <div class="flex flex-wrap gap-2" id="creep-tags"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Details -->
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Flagged Items -->
+                    <div class="glass rounded-2xl p-6">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">🚩 Flagged Issues</h4>
+                        <div id="flagged-items" class="space-y-3"></div>
+                    </div>
+                    <!-- Response Scripts -->
+                    <div class="glass rounded-2xl p-6">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">💬 Pushback Scripts</h4>
+                        <div id="response-scripts" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- Scope Log -->
+                <div class="glass rounded-2xl p-6 mt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-semibold flex items-center gap-2">📊 Scope Log</h4>
+                        <span id="log-count" class="text-xs text-gray-500">0 analyses</span>
+                    </div>
+                    <div id="scope-log" class="space-y-2 max-h-60 overflow-y-auto"></div>
+                    <div id="log-empty" class="text-center text-gray-600 py-4">Analyses will appear here as you check messages</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how" class="py-20 px-6 bg-white/[0.01]">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-12">How ScopeGuard Catches Creep</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="glass rounded-2xl p-8 text-center">
+                    <div class="text-4xl mb-4">📋</div>
+                    <h3 class="text-xl font-bold mb-3">1. Paste Contract</h3>
+                    <p class="text-gray-400 text-sm">Drop in your SoW, contract scope, or deliverables list. ScopeGuard extracts key commitments.</p>
+                </div>
+                <div class="glass rounded-2xl p-8 text-center">
+                    <div class="text-4xl mb-4">💬</div>
+                    <h3 class="text-xl font-bold mb-3">2. Client Message</h3>
+                    <p class="text-gray-400 text-sm">Paste any client message — email, Slack, meeting notes, or verbal request summary.</p>
+                </div>
+                <div class="glass rounded-2xl p-8 text-center">
+                    <div class="text-4xl mb-4">🛡️</div>
+                    <h3 class="text-xl font-bold mb-3">3. Instant Verdict</h3>
+                    <p class="text-gray-400 text-sm">Get a creep score, flagged issues by category, and professional pushback scripts you can send immediately.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard Preview -->
+    <section id="dashboard" class="py-20 px-6">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-3">Your Creep Dashboard</h2>
+            <p class="text-gray-400 text-center mb-10">Track every flagged request. See patterns. Protect your margins.</p>
+
+            <div class="glass rounded-2xl p-8 glow">
+                <!-- Stats Row -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white/5 rounded-xl p-4 text-center">
+                        <div id="stat-total" class="text-3xl font-extrabold text-orange-400">0</div>
+                        <div class="text-xs text-gray-500 mt-1">Total Analyses</div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4 text-center">
+                        <div id="stat-creep" class="text-3xl font-extrabold text-red-400">0</div>
+                        <div class="text-xs text-gray-500 mt-1">Creep Detected</div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4 text-center">
+                        <div id="stat-cost" class="text-3xl font-extrabold text-yellow-400">$0</div>
+                        <div class="text-xs text-gray-500 mt-1">Est. Cost Protected</div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4 text-center">
+                        <div id="stat-patterns" class="text-3xl font-extrabold text-purple-400">0</div>
+                        <div class="text-xs text-gray-500 mt-1">Creep Patterns</div>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown -->
+                <h4 class="text-sm font-medium text-gray-400 mb-4">CREEP CATEGORIES DETECTED</h4>
+                <div class="space-y-3" id="category-bars">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs w-32 text-gray-400">Extra Features</span>
+                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                            <div id="bar-features" class="bg-red-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                        </div>
+                        <span id="pct-features" class="text-xs text-gray-500 w-8">0%</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs w-32 text-gray-400">Design Changes</span>
+                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                            <div id="bar-design" class="bg-orange-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                        </div>
+                        <span id="pct-design" class="text-xs text-gray-500 w-8">0%</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs w-32 text-gray-400">Timeline Extensions</span>
+                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                            <div id="bar-timeline" class="bg-yellow-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                        </div>
+                        <span id="pct-timeline" class="text-xs text-gray-500 w-8">0%</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs w-32 text-gray-400">Budget Implications</span>
+                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                            <div id="bar-budget" class="bg-blue-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                        </div>
+                        <span id="pct-budget" class="text-xs text-gray-500 w-8">0%</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs w-32 text-gray-400">New Deliverables</span>
+                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                            <div id="bar-deliverables" class="bg-purple-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                        </div>
+                        <span id="pct-deliverables" class="text-xs text-gray-500 w-8">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison -->
+    <section class="py-20 px-6 bg-white/[0.01]">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-10">Why ScopeGuard?</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-white/10">
+                            <th class="text-left py-4 px-4 text-gray-400 font-medium">Feature</th>
+                            <th class="py-4 px-4 text-center"><span class="text-orange-400 font-bold">ScopeGuard</span></th>
+                            <th class="py-4 px-4 text-center text-gray-500">ChatGPT</th>
+                            <th class="py-4 px-4 text-center text-gray-500">Asana/Monday</th>
+                            <th class="py-4 px-4 text-center text-gray-500">Indy/Bonsai</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">Scope creep detection</td>
+                            <td class="py-3 px-4 text-center text-green-400">✓</td>
+                            <td class="py-3 px-4 text-center text-gray-600">Manual</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">Contract analysis</td>
+                            <td class="py-3 px-4 text-center text-green-400">✓</td>
+                            <td class="py-3 px-4 text-center text-yellow-400">~</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-yellow-400">~</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">Pushback scripts</td>
+                            <td class="py-3 px-4 text-center text-green-400">✓</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">Creep scoring (0-100)</td>
+                            <td class="py-3 px-4 text-center text-green-400">✓</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">Pattern tracking over time</td>
+                            <td class="py-3 px-4 text-center text-green-400">✓</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-yellow-400">~</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">Privacy-first (client-side)</td>
+                            <td class="py-3 px-4 text-center text-green-400">✓</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4">Cost</td>
+                            <td class="py-3 px-4 text-center text-orange-400 font-bold">Free → $9/mo</td>
+                            <td class="py-3 px-4 text-center text-gray-500">$20/mo</td>
+                            <td class="py-3 px-4 text-center text-gray-500">$10-15/user</td>
+                            <td class="py-3 px-4 text-center text-gray-500">$9-24/mo</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing" class="py-20 px-6">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl font-bold text-center mb-3">Simple Pricing</h2>
+            <p class="text-gray-400 text-center mb-12">Protect $6K-15K/year for less than a coffee per week.</p>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="glass rounded-2xl p-8">
+                    <h3 class="text-xl font-bold mb-2">Free</h3>
+                    <div class="text-3xl font-extrabold mb-1">$0<span class="text-lg text-gray-500">/mo</span></div>
+                    <p class="text-gray-500 text-sm mb-6">Try it out</p>
+                    <ul class="space-y-3 text-sm text-gray-300">
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> 5 analyses/month</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Basic creep detection</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Creep scoring</li>
+                        <li class="flex items-center gap-2 text-gray-600"><span>✗</span> Pushback scripts</li>
+                        <li class="flex items-center gap-2 text-gray-600"><span>✗</span> Scope log</li>
+                    </ul>
+                </div>
+                <div class="glass rounded-2xl p-8 border-orange-500/30 glow relative">
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full">POPULAR</div>
+                    <h3 class="text-xl font-bold mb-2">Pro</h3>
+                    <div class="text-3xl font-extrabold mb-1">$9<span class="text-lg text-gray-500">/mo</span></div>
+                    <p class="text-gray-500 text-sm mb-6">Save thousands</p>
+                    <ul class="space-y-3 text-sm text-gray-300">
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Unlimited analyses</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Pushback scripts (3 tones)</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Full scope log</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Pattern detection</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Cost estimation</li>
+                    </ul>
+                    <button class="w-full mt-6 bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl font-semibold transition">Join Waitlist</button>
+                </div>
+                <div class="glass rounded-2xl p-8">
+                    <h3 class="text-xl font-bold mb-2">Team</h3>
+                    <div class="text-3xl font-extrabold mb-1">$19<span class="text-lg text-gray-500">/mo</span></div>
+                    <p class="text-gray-500 text-sm mb-6">For agencies</p>
+                    <ul class="space-y-3 text-sm text-gray-300">
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Everything in Pro</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Multiple projects</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Team sharing</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Client reports</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> ContractPilot integration</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Ecosystem -->
+    <section class="py-20 px-6 bg-white/[0.01]">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-3xl font-bold mb-3">Part of the Freelancer Stack</h2>
+            <p class="text-gray-400 mb-10">9 tools covering every freelancer workflow. All by OpenSphere Labs.</p>
+            <div class="flex flex-wrap items-center justify-center gap-3 text-sm">
+                <a href="https://atalovesyou.github.io/intakebot/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">🤖 IntakeBot</a>
+                <span class="text-gray-600">→</span>
+                <a href="https://atalovesyou.github.io/contractpilot/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">📝 ContractPilot</a>
+                <span class="text-gray-600">→</span>
+                <span class="bg-orange-600/20 border border-orange-500/30 px-4 py-2 rounded-lg text-orange-300 font-medium">🛡️ ScopeGuard</span>
+                <span class="text-gray-600">→</span>
+                <a href="https://atalovesyou.github.io/ghosttracker/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">👻 GhostTracker</a>
+                <span class="text-gray-600">→</span>
+                <a href="https://atalovesyou.github.io/invoicepilot/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">🧾 InvoicePilot</a>
+                <span class="text-gray-600">→</span>
+                <a href="https://atalovesyou.github.io/reviewagent/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">⭐ ReviewAgent</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Waitlist -->
+    <section id="waitlist-section" class="py-20 px-6">
+        <div class="max-w-md mx-auto text-center">
+            <h2 class="text-3xl font-bold mb-3">Stop Losing Money to Scope Creep</h2>
+            <p class="text-gray-400 mb-8">Join the waitlist. First users get 3 months free.</p>
+            <form onsubmit="joinWaitlist(event)" class="flex gap-2">
+                <input type="email" id="waitlist-email" placeholder="you@email.com" required
+                    class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-orange-500/50">
+                <button type="submit" class="bg-orange-600 hover:bg-orange-500 text-white px-6 py-3 rounded-xl font-semibold transition whitespace-nowrap">
+                    Join Waitlist
+                </button>
+            </form>
+            <div id="waitlist-success" class="hidden mt-4 text-green-400 text-sm">✓ You're on the list! We'll reach out soon.</div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-10 px-6 border-t border-white/5">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+            <div class="flex items-center gap-2">
+                <span>🛡️</span>
+                <span>ScopeGuard by <a href="https://atalovesyou.github.io/opensphere-labs/" class="text-gray-400 hover:text-white transition">OpenSphere Labs</a></span>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="https://atalovesyou.github.io/opensphere-labs/" class="hover:text-white transition">All Products</a>
+                <a href="https://github.com/atalovesyou/scopeguard" class="hover:text-white transition">GitHub</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    // ===== SCOPE CREEP ANALYZER =====
+    const CREEP_SIGNALS = {
+        features: {
+            keywords: ['add', 'additional', 'extra', 'also need', 'could you also', 'while you\'re at it', 'one more thing', 'just need', 'also include', 'plus', 'along with', 'it would be great if', 'can we throw in', 'might as well', 'since you\'re already', 'throw in', 'bonus', 'extra feature', 'one more feature', 'additional page', 'another page', 'more pages', 'extra section', 'another section', 'new functionality', 'add a feature'],
+            weight: 1.0,
+            label: 'Extra Features'
+        },
+        design: {
+            keywords: ['redesign', 'change the design', 'update the look', 'make it look like', 'revamp', 'rebrand', 'change colors', 'different layout', 'new style', 'modernize', 'refresh', 'new design', 'different design', 'redesign the', 'change the layout', 'update branding', 'new brand'],
+            weight: 0.8,
+            label: 'Design Changes'
+        },
+        timeline: {
+            keywords: ['rush', 'urgent', 'asap', 'by tomorrow', 'need it faster', 'can you finish', 'sooner', 'deadline moved', 'earlier', 'quick turnaround', 'express', 'priority', 'immediately', 'right away', 'no later than', 'can we move up'],
+            weight: 0.7,
+            label: 'Timeline Pressure'
+        },
+        budget: {
+            keywords: ['discount', 'cheaper', 'lower price', 'reduce the cost', 'can you do it for less', 'budget is tight', 'free of charge', 'no additional cost', 'included in the price', 'won\'t charge extra', 'at no cost', 'complimentary', 'throw in for free', 'absorb the cost', 'cover this too'],
+            weight: 0.9,
+            label: 'Budget Pressure'
+        },
+        deliverables: {
+            keywords: ['also create', 'need a logo', 'write the copy', 'create content', 'social media', 'marketing materials', 'business card', 'letterhead', 'video', 'animation', 'new deliverable', 'another deliverable', 'additional deliverable', 'separate document', 'new document', 'extra asset'],
+            weight: 1.0,
+            label: 'New Deliverables'
+        }
+    };
+
+    const SCOPE_KEYWORDS = ['scope', 'deliver', 'include', 'provide', 'build', 'create', 'design', 'develop', 'pages', 'sections', 'features', 'functionality', 'revisions', 'timeline', 'deadline', 'milestone'];
+
+    let scopeLog = JSON.parse(localStorage.getItem('scopeguard-log') || '[]');
+    let categoryTotals = JSON.parse(localStorage.getItem('scopeguard-categories') || '{"features":0,"design":0,"timeline":0,"budget":0,"deliverables":0}');
+
+    function loadExample() {
+        document.getElementById('contract-input').value = `PROJECT SCOPE — Website Redesign for Acme Corp
+
+Deliverables:
+• Homepage redesign (1 concept, 2 rounds of revisions)
+• About Us page
+• Contact page with form
+• Up to 5 additional content pages
+• Mobile-responsive design
+• Basic SEO optimization
+
+Timeline: 4 weeks from project start
+Revisions: 2 rounds included, additional rounds at $150/round
+Not included: Content writing, photography, logo design, social media assets, backend development, hosting setup`;
+
+        document.getElementById('message-input').value = `Hey! The homepage is looking great. Just a few things:
+
+1. Can you also design a logo for us? Nothing fancy, just something clean.
+2. We need the about page to have an animated timeline of our company history.
+3. Also, while you're at it, could you write the copy for all the pages? We haven't had time.
+4. One more thing — can you throw in some social media banners? We're launching next month.
+5. We love it so much we want to add a blog section with 10 starter articles.
+6. Oh, and can you finish everything by next Friday? Our investor meeting got moved up.
+
+Thanks! You're the best 🙌`;
+
+        analyzeCreep();
+    }
+
+    function analyzeCreep() {
+        const contract = document.getElementById('contract-input').value.trim();
+        const message = document.getElementById('message-input').value.trim();
+
+        if (!contract || !message) {
+            alert('Please paste both your contract scope and the client message.');
+            return;
+        }
+
+        const msgLower = message.toLowerCase();
+        const contractLower = contract.toLowerCase();
+
+        // Extract scope boundaries
+        const scopeBoundaries = extractScopeBoundaries(contractLower);
+
+        // Detect creep signals
+        const findings = [];
+        let totalScore = 0;
+
+        for (const [category, config] of Object.entries(CREEP_SIGNALS)) {
+            const matches = config.keywords.filter(kw => msgLower.includes(kw));
+            if (matches.length > 0) {
+                const catScore = Math.min(matches.length * config.weight * 20, 100);
+                findings.push({
+                    category,
+                    label: config.label,
+                    score: Math.round(catScore),
+                    matches: matches.slice(0, 3),
+                    severity: catScore > 60 ? 'high' : catScore > 30 ? 'medium' : 'low'
+                });
+                totalScore += catScore * config.weight;
+            }
+        }
+
+        // Check for scope boundary violations
+        const violations = checkScopeViolations(msgLower, scopeBoundaries);
+        totalScore += violations.length * 15;
+
+        // Normalize score
+        const creepScore = Math.min(Math.round(totalScore), 100);
+
+        // Determine verdict
+        let verdict, verdictDesc, color;
+        if (creepScore >= 70) {
+            verdict = '🚨 Major Scope Creep';
+            verdictDesc = 'This message contains significant out-of-scope requests. Flag multiple items for pushback.';
+            color = '#ef4444';
+        } else if (creepScore >= 40) {
+            verdict = '⚠️ Moderate Creep Risk';
+            verdictDesc = 'Some requests may be outside scope. Review each item carefully.';
+            color = '#f59e0b';
+        } else if (creepScore >= 15) {
+            verdict = '👀 Minor Request';
+            verdictDesc = 'Small ask that may be within scope. Quick check recommended.';
+            color = '#3b82f6';
+        } else {
+            verdict = '✅ Looks In Scope';
+            verdictDesc = 'This message appears to be within your agreed scope.';
+            color = '#22c55e';
+        }
+
+        // Display results
+        document.getElementById('results').classList.remove('hidden');
+
+        // Animate score
+        const scoreCircle = document.getElementById('score-circle');
+        const circumference = 377;
+        const offset = circumference - (creepScore / 100) * circumference;
+        scoreCircle.style.stroke = color;
+        scoreCircle.style.strokeDashoffset = offset;
+
+        const scoreNum = document.getElementById('score-number');
+        animateNumber(scoreNum, creepScore);
+
+        document.getElementById('verdict-title').textContent = verdict;
+        document.getElementById('verdict-title').style.color = color;
+        document.getElementById('verdict-desc').textContent = verdictDesc;
+
+        // Tags
+        const tagsEl = document.getElementById('creep-tags');
+        tagsEl.innerHTML = findings.map(f =>
+            `<span class="px-3 py-1 rounded-full text-xs font-medium ${f.severity === 'high' ? 'bg-red-500/20 text-red-300' : f.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-green-500/20 text-green-300'}">${f.label} (${f.score})</span>`
+        ).join('');
+
+        // Flagged items
+        const flaggedEl = document.getElementById('flagged-items');
+        flaggedEl.innerHTML = '';
+        findings.forEach(f => {
+            flaggedEl.innerHTML += `
+                <div class="${f.severity === 'high' ? 'creep-high' : f.severity === 'medium' ? 'creep-medium' : 'creep-low'} rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-medium text-sm">${f.label}</span>
+                        <span class="text-xs font-bold ${f.severity === 'high' ? 'text-red-400' : f.severity === 'medium' ? 'text-yellow-400' : 'text-green-400'}">${f.score}/100</span>
+                    </div>
+                    <div class="text-xs text-gray-400">Triggered: "${f.matches.join('", "')}"</div>
+                </div>`;
+        });
+        if (violations.length > 0) {
+            violations.forEach(v => {
+                flaggedEl.innerHTML += `
+                    <div class="creep-high rounded-lg p-3">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-medium text-sm">⛔ Scope Violation</span>
+                            <span class="text-xs font-bold text-red-400">NEW</span>
+                        </div>
+                        <div class="text-xs text-gray-400">${v}</div>
+                    </div>`;
+            });
+        }
+        if (findings.length === 0 && violations.length === 0) {
+            flaggedEl.innerHTML = '<div class="text-center text-gray-500 py-4">No scope creep detected 🎉</div>';
+        }
+
+        // Pushback scripts
+        const scriptsEl = document.getElementById('response-scripts');
+        scriptsEl.innerHTML = '';
+        if (findings.length > 0 || violations.length > 0) {
+            const scripts = generatePushback(findings, violations);
+            scripts.forEach(s => {
+                scriptsEl.innerHTML += `
+                    <div class="bg-white/5 rounded-lg p-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-medium text-gray-400">${s.tone}</span>
+                            <button onclick="copyText(this, \`${s.text.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`)" class="text-xs text-orange-400 hover:text-orange-300 transition">Copy</button>
+                        </div>
+                        <p class="text-sm text-gray-300">${s.text}</p>
+                    </div>`;
+            });
+        } else {
+            scriptsEl.innerHTML = '<div class="text-center text-gray-500 py-4">No pushback needed!</div>';
+        }
+
+        // Log entry
+        const entry = {
+            date: new Date().toISOString(),
+            score: creepScore,
+            verdict,
+            categories: findings.map(f => f.label),
+            messagePreview: message.substring(0, 80) + (message.length > 80 ? '...' : '')
+        };
+        scopeLog.unshift(entry);
+        if (scopeLog.length > 50) scopeLog = scopeLog.slice(0, 50);
+        localStorage.setItem('scopeguard-log', JSON.stringify(scopeLog));
+
+        // Update category totals
+        findings.forEach(f => {
+            categoryTotals[f.category] = (categoryTotals[f.category] || 0) + 1;
+        });
+        localStorage.setItem('scopeguard-categories', JSON.stringify(categoryTotals));
+
+        updateDashboard();
+        updateScopeLog();
+    }
+
+    function extractScopeBoundaries(contractLower) {
+        const boundaries = [];
+        const notIncluded = contractLower.match(/not included[:\s]*([^.\n]+)/g);
+        if (notIncluded) {
+            notIncluded.forEach(m => {
+                const items = m.replace(/not included[:\s]*/i, '').split(/[,;]/);
+                items.forEach(item => {
+                    const cleaned = item.trim();
+                    if (cleaned.length > 2) boundaries.push(cleaned);
+                });
+            });
+        }
+        const excluded = contractLower.match(/exclud(?:ed|es)[:\s]*([^.\n]+)/g);
+        if (excluded) {
+            excluded.forEach(m => {
+                const items = m.replace(/exclud(?:ed|es)[:\s]*/i, '').split(/[,;]/);
+                items.forEach(item => {
+                    const cleaned = item.trim();
+                    if (cleaned.length > 2) boundaries.push(cleaned);
+                });
+            });
+        }
+        return boundaries;
+    }
+
+    function checkScopeViolations(msgLower, boundaries) {
+        const violations = [];
+        boundaries.forEach(b => {
+            const words = b.split(/\s+/).filter(w => w.length > 3);
+            const matchedWords = words.filter(w => msgLower.includes(w));
+            if (matchedWords.length >= 1 && matchedWords.length / words.length >= 0.4) {
+                violations.push(`Client requesting "${b}" — explicitly excluded from contract`);
+            }
+        });
+        return violations;
+    }
+
+    function generatePushback(findings, violations) {
+        const hasFeatures = findings.some(f => f.category === 'features');
+        const hasBudget = findings.some(f => f.category === 'budget');
+        const hasTimeline = findings.some(f => f.category === 'timeline');
+        const hasDeliverables = findings.some(f => f.category === 'deliverables');
+
+        const scripts = [];
+
+        scripts.push({
+            tone: '🤝 Collaborative',
+            text: `Thanks for the ideas! I love the enthusiasm. A few of these fall outside our original scope — want me to put together a quick add-on quote for the extra items? Happy to work out a bundle price since we're already in motion.`
+        });
+
+        if (hasFeatures || hasDeliverables) {
+            scripts.push({
+                tone: '📋 Professional',
+                text: `Great suggestions! I've reviewed these against our project scope, and a few items (like the new deliverables) go beyond what we outlined. I can absolutely handle these — shall I send over an updated scope with pricing for the additions?`
+            });
+        }
+
+        if (hasBudget) {
+            scripts.push({
+                tone: '💪 Firm',
+                text: `I appreciate the trust! The items you mentioned are outside our agreed scope, so they'd need a separate estimate. I want to make sure I can give each piece the attention it deserves without compromising the core project. Want me to quote the extras?`
+            });
+        }
+
+        if (hasTimeline) {
+            scripts.push({
+                tone: '⏰ Realistic',
+                text: `I hear you on the timeline. To hit that date without cutting corners on quality, we'd need to either reduce scope or add a rush fee. Want to chat about which approach works best?`
+            });
+        }
+
+        return scripts.slice(0, 3);
+    }
+
+    function copyText(btn, text) {
+        navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+    }
+
+    function animateNumber(el, target) {
+        let current = 0;
+        const step = Math.ceil(target / 30);
+        const timer = setInterval(() => {
+            current += step;
+            if (current >= target) {
+                current = target;
+                clearInterval(timer);
+            }
+            el.textContent = current;
+        }, 30);
+    }
+
+    function updateDashboard() {
+        const total = scopeLog.length;
+        const creepCount = scopeLog.filter(e => e.score >= 40).length;
+        const estCost = creepCount * 450;
+
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-creep').textContent = creepCount;
+        document.getElementById('stat-cost').textContent = '$' + estCost.toLocaleString();
+
+        const patterns = Object.values(categoryTotals).filter(v => v > 0).length;
+        document.getElementById('stat-patterns').textContent = patterns;
+
+        // Category bars
+        const maxCat = Math.max(...Object.values(categoryTotals), 1);
+        for (const [cat, count] of Object.entries(categoryTotals)) {
+            const pct = Math.round((count / maxCat) * 100);
+            const bar = document.getElementById('bar-' + cat);
+            const label = document.getElementById('pct-' + cat);
+            if (bar) bar.style.width = pct + '%';
+            if (label) label.textContent = count > 0 ? pct + '%' : '0%';
+        }
+    }
+
+    function updateScopeLog() {
+        const logEl = document.getElementById('scope-log');
+        const emptyEl = document.getElementById('log-empty');
+        const countEl = document.getElementById('log-count');
+
+        countEl.textContent = scopeLog.length + ' analyses';
+
+        if (scopeLog.length === 0) {
+            emptyEl.classList.remove('hidden');
+            logEl.innerHTML = '';
+            return;
+        }
+
+        emptyEl.classList.add('hidden');
+        logEl.innerHTML = scopeLog.slice(0, 20).map(entry => {
+            const date = new Date(entry.date);
+            const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const scoreColor = entry.score >= 70 ? 'text-red-400' : entry.score >= 40 ? 'text-yellow-400' : 'text-green-400';
+            return `
+                <div class="flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2">
+                    <span class="text-xs text-gray-500 w-28 shrink-0">${timeStr}</span>
+                    <span class="${scoreColor} font-bold text-sm w-8">${entry.score}</span>
+                    <span class="text-xs text-gray-400 flex-1 truncate">${entry.messagePreview}</span>
+                    <div class="flex gap-1">${(entry.categories || []).slice(0, 2).map(c => `<span class="text-[10px] bg-white/10 px-1.5 py-0.5 rounded">${c}</span>`).join('')}</div>
+                </div>`;
+        }).join('');
+    }
+
+    function joinWaitlist(e) {
+        e.preventDefault();
+        const email = document.getElementById('waitlist-email').value;
+        let waitlist = JSON.parse(localStorage.getItem('scopeguard-waitlist') || '[]');
+        if (!waitlist.includes(email)) {
+            waitlist.push(email);
+            localStorage.setItem('scopeguard-waitlist', JSON.stringify(waitlist));
+        }
+        document.getElementById('waitlist-success').classList.remove('hidden');
+        document.getElementById('waitlist-email').value = '';
+    }
+
+    // Init dashboard on load
+    updateDashboard();
+    updateScopeLog();
+    </script>
+</body>
+</html>
