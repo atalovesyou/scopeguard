@@ -34,6 +34,7 @@
     <meta name="twitter:description" content="AI-powered scope creep detection. Paste contract + client message → instant creep score. Save $6K-15K/year.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -48,7 +49,15 @@
         @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(249,115,22,0.2); } 50% { box-shadow: 0 0 40px rgba(249,115,22,0.4); } }
         .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
         .score-ring { transition: stroke-dashoffset 1s ease-out; }
-        textarea:focus { outline: none; border-color: rgba(249,115,22,0.5); box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+        textarea:focus, input:focus { outline: none; border-color: rgba(249,115,22,0.5); box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+        .tab-active { border-bottom: 2px solid #f97316; color: white; }
+        .tab-inactive { border-bottom: 2px solid transparent; color: #9ca3af; }
+        .tab-inactive:hover { color: #d1d5db; }
+        .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
+        .trend-bar { transition: height 0.5s ease-out; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
     </style>
 </head>
 <body class="bg-[#0a0a0f] text-gray-200 antialiased">
@@ -59,16 +68,20 @@
             <div class="flex items-center gap-2">
                 <span class="text-2xl">🛡️</span>
                 <span class="text-xl font-bold">Scope<span class="text-orange-400">Guard</span></span>
+                <span class="text-[10px] bg-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded-full font-medium">v2.0</span>
             </div>
             <div class="hidden md:flex items-center gap-8 text-sm text-gray-400">
-                <a href="#demo" class="hover:text-white transition">Demo</a>
-                <a href="#how" class="hover:text-white transition">How It Works</a>
+                <a href="#demo" class="hover:text-white transition">Analyze</a>
                 <a href="#dashboard" class="hover:text-white transition">Dashboard</a>
+                <a href="#history" class="hover:text-white transition">History</a>
                 <a href="#pricing" class="hover:text-white transition">Pricing</a>
             </div>
-            <button onclick="document.getElementById('waitlist-section').scrollIntoView({behavior:'smooth'})" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-                Join Waitlist
-            </button>
+            <div class="flex items-center gap-3">
+                <button onclick="exportPDFReport()" class="text-gray-400 hover:text-white px-3 py-2 text-sm transition" title="Export Report">📄</button>
+                <button onclick="document.getElementById('waitlist-section').scrollIntoView({behavior:'smooth'})" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
+                    Join Waitlist
+                </button>
+            </div>
         </div>
     </nav>
 
@@ -83,18 +96,19 @@
                 Catch <span class="gradient-text">scope creep</span><br>before it costs you
             </h1>
             <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-10">
-                Paste your contract. Paste the client message. Get an instant creep score. ScopeGuard flags out-of-scope requests and gives you professional pushback scripts.
+                Paste your contract. Paste the client message. Get an instant creep score with semantic analysis, contract parsing, and professional pushback scripts.
             </p>
             <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})" class="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3.5 rounded-xl text-lg font-semibold transition glow">
                     Try the Demo ↓
                 </button>
-                <a href="#pricing" class="text-gray-400 hover:text-white px-6 py-3.5 transition">See pricing →</a>
+                <a href="#dashboard" class="text-gray-400 hover:text-white px-6 py-3.5 transition">Dashboard →</a>
             </div>
             <div class="mt-12 flex items-center justify-center gap-8 text-sm text-gray-500">
-                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> No signup needed</div>
-                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> 100% private (client-side)</div>
-                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> Instant results</div>
+                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> Contract auto-parser</div>
+                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> Semantic analysis</div>
+                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> PDF reports</div>
+                <div class="flex items-center gap-2"><span class="text-green-400">✓</span> 100% private</div>
             </div>
         </div>
     </section>
@@ -103,29 +117,43 @@
     <section id="demo" class="py-20 px-6">
         <div class="max-w-5xl mx-auto">
             <h2 class="text-3xl font-bold text-center mb-3">Scope Creep Detector</h2>
-            <p class="text-gray-400 text-center mb-10">Paste your contract scope + a client message. See if it's scope creep.</p>
+            <p class="text-gray-400 text-center mb-10">Paste your contract scope + client message. Get semantic creep analysis.</p>
+
+            <!-- Client name -->
+            <div class="max-w-md mx-auto mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-2">👤 Client Name (optional, for tracking)</label>
+                <input type="text" id="client-name" placeholder="e.g., Acme Corp"
+                    class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 transition">
+            </div>
 
             <div class="grid md:grid-cols-2 gap-6 mb-8">
                 <!-- Contract Input -->
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-2">📋 Your Contract Scope</label>
-                    <textarea id="contract-input" rows="8" placeholder="Paste your contract's scope section or SoW deliverables here..."
+                    <textarea id="contract-input" rows="10" placeholder="Paste your contract's scope section or SoW deliverables here..."
                         class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder-gray-600 resize-none transition"></textarea>
+                    <div id="parsed-contract" class="mt-3 hidden">
+                        <div class="text-xs text-gray-500 mb-1">Auto-detected:</div>
+                        <div id="parsed-items" class="flex flex-wrap gap-1"></div>
+                    </div>
                 </div>
                 <!-- Client Message -->
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-2">💬 Client Message</label>
-                    <textarea id="message-input" rows="8" placeholder="Paste the client's email, Slack message, or meeting notes here..."
+                    <textarea id="message-input" rows="10" placeholder="Paste the client's email, Slack message, or meeting notes here..."
                         class="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-gray-200 placeholder-gray-600 resize-none transition"></textarea>
                 </div>
             </div>
 
             <div class="flex items-center justify-center gap-4 mb-8">
-                <button onclick="analyzeCreep()" class="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-semibold transition">
-                    🔍 Analyze for Scope Creep
+                <button onclick="analyzeCreep()" id="analyze-btn" class="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl font-semibold transition flex items-center gap-2">
+                    <span>🔍</span> Analyze for Scope Creep
                 </button>
                 <button onclick="loadExample()" class="bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 px-6 py-3 rounded-xl font-medium transition">
                     Load Example
+                </button>
+                <button onclick="clearAnalysis()" class="text-gray-500 hover:text-gray-300 px-4 py-3 transition text-sm">
+                    Clear
                 </button>
             </div>
 
@@ -148,75 +176,50 @@
                         </div>
                         <div class="flex-1">
                             <h3 id="verdict-title" class="text-2xl font-bold mb-2">Analyzing...</h3>
-                            <p id="verdict-desc" class="text-gray-400 mb-4"></p>
+                            <p id="verdict-desc" class="text-gray-400 mb-3"></p>
+                            <div id="contract-summary" class="text-sm text-gray-500 mb-3 hidden"></div>
                             <div class="flex flex-wrap gap-2" id="creep-tags"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Details -->
-                <div class="grid md:grid-cols-2 gap-6">
-                    <!-- Flagged Items -->
-                    <div class="glass rounded-2xl p-6">
-                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">🚩 Flagged Issues</h4>
+                <!-- Tabs: Flagged / Scripts / Contract Match -->
+                <div class="mb-6">
+                    <div class="flex gap-6 border-b border-white/10 mb-4">
+                        <button onclick="switchTab('flagged')" id="tab-flagged" class="pb-2 text-sm font-medium tab-active">🚩 Flagged Issues</button>
+                        <button onclick="switchTab('scripts')" id="tab-scripts" class="pb-2 text-sm font-medium tab-inactive">💬 Pushback Scripts</button>
+                        <button onclick="switchTab('contract')" id="tab-contract" class="pb-2 text-sm font-medium tab-inactive">📋 Contract Match</button>
+                    </div>
+                    <!-- Flagged -->
+                    <div id="panel-flagged" class="glass rounded-2xl p-6">
                         <div id="flagged-items" class="space-y-3"></div>
                     </div>
-                    <!-- Response Scripts -->
-                    <div class="glass rounded-2xl p-6">
-                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">💬 Pushback Scripts</h4>
+                    <!-- Scripts -->
+                    <div id="panel-scripts" class="glass rounded-2xl p-6 hidden">
                         <div id="response-scripts" class="space-y-3"></div>
                     </div>
-                </div>
-
-                <!-- Scope Log -->
-                <div class="glass rounded-2xl p-6 mt-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-lg font-semibold flex items-center gap-2">📊 Scope Log</h4>
-                        <span id="log-count" class="text-xs text-gray-500">0 analyses</span>
+                    <!-- Contract Match -->
+                    <div id="panel-contract" class="glass rounded-2xl p-6 hidden">
+                        <h4 class="text-sm font-medium text-gray-400 mb-4">SEMANTIC MATCH — Client message vs your contract scope</h4>
+                        <div id="contract-match-items" class="space-y-3"></div>
                     </div>
-                    <div id="scope-log" class="space-y-2 max-h-60 overflow-y-auto"></div>
-                    <div id="log-empty" class="text-center text-gray-600 py-4">Analyses will appear here as you check messages</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- How It Works -->
-    <section id="how" class="py-20 px-6 bg-white/[0.01]">
-        <div class="max-w-5xl mx-auto">
-            <h2 class="text-3xl font-bold text-center mb-12">How ScopeGuard Catches Creep</h2>
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="glass rounded-2xl p-8 text-center">
-                    <div class="text-4xl mb-4">📋</div>
-                    <h3 class="text-xl font-bold mb-3">1. Paste Contract</h3>
-                    <p class="text-gray-400 text-sm">Drop in your SoW, contract scope, or deliverables list. ScopeGuard extracts key commitments.</p>
-                </div>
-                <div class="glass rounded-2xl p-8 text-center">
-                    <div class="text-4xl mb-4">💬</div>
-                    <h3 class="text-xl font-bold mb-3">2. Client Message</h3>
-                    <p class="text-gray-400 text-sm">Paste any client message — email, Slack, meeting notes, or verbal request summary.</p>
-                </div>
-                <div class="glass rounded-2xl p-8 text-center">
-                    <div class="text-4xl mb-4">🛡️</div>
-                    <h3 class="text-xl font-bold mb-3">3. Instant Verdict</h3>
-                    <p class="text-gray-400 text-sm">Get a creep score, flagged issues by category, and professional pushback scripts you can send immediately.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Dashboard Preview -->
-    <section id="dashboard" class="py-20 px-6">
+    <!-- Dashboard -->
+    <section id="dashboard" class="py-20 px-6 bg-white/[0.01]">
         <div class="max-w-5xl mx-auto">
             <h2 class="text-3xl font-bold text-center mb-3">Your Creep Dashboard</h2>
             <p class="text-gray-400 text-center mb-10">Track every flagged request. See patterns. Protect your margins.</p>
 
             <div class="glass rounded-2xl p-8 glow">
                 <!-- Stats Row -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                     <div class="bg-white/5 rounded-xl p-4 text-center">
                         <div id="stat-total" class="text-3xl font-extrabold text-orange-400">0</div>
-                        <div class="text-xs text-gray-500 mt-1">Total Analyses</div>
+                        <div class="text-xs text-gray-500 mt-1">Analyses</div>
                     </div>
                     <div class="bg-white/5 rounded-xl p-4 text-center">
                         <div id="stat-creep" class="text-3xl font-extrabold text-red-400">0</div>
@@ -224,52 +227,100 @@
                     </div>
                     <div class="bg-white/5 rounded-xl p-4 text-center">
                         <div id="stat-cost" class="text-3xl font-extrabold text-yellow-400">$0</div>
-                        <div class="text-xs text-gray-500 mt-1">Est. Cost Protected</div>
+                        <div class="text-xs text-gray-500 mt-1">Cost Protected</div>
                     </div>
                     <div class="bg-white/5 rounded-xl p-4 text-center">
-                        <div id="stat-patterns" class="text-3xl font-extrabold text-purple-400">0</div>
-                        <div class="text-xs text-gray-500 mt-1">Creep Patterns</div>
+                        <div id="stat-clients" class="text-3xl font-extrabold text-purple-400">0</div>
+                        <div class="text-xs text-gray-500 mt-1">Clients Tracked</div>
+                    </div>
+                    <div class="bg-white/5 rounded-xl p-4 text-center">
+                        <div id="stat-avg" class="text-3xl font-extrabold text-blue-400">0</div>
+                        <div class="text-xs text-gray-500 mt-1">Avg Score</div>
                     </div>
                 </div>
 
-                <!-- Category Breakdown -->
-                <h4 class="text-sm font-medium text-gray-400 mb-4">CREEP CATEGORIES DETECTED</h4>
-                <div class="space-y-3" id="category-bars">
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs w-32 text-gray-400">Extra Features</span>
-                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
-                            <div id="bar-features" class="bg-red-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Category Breakdown -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-400 mb-4">CREEP CATEGORIES</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs w-32 text-gray-400">Extra Features</span>
+                                <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                                    <div id="bar-features" class="bg-red-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                                </div>
+                                <span id="pct-features" class="text-xs text-gray-500 w-8">0%</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs w-32 text-gray-400">Design Changes</span>
+                                <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                                    <div id="bar-design" class="bg-orange-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                                </div>
+                                <span id="pct-design" class="text-xs text-gray-500 w-8">0%</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs w-32 text-gray-400">Timeline Pressure</span>
+                                <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                                    <div id="bar-timeline" class="bg-yellow-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                                </div>
+                                <span id="pct-timeline" class="text-xs text-gray-500 w-8">0%</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs w-32 text-gray-400">Budget Pressure</span>
+                                <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                                    <div id="bar-budget" class="bg-blue-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                                </div>
+                                <span id="pct-budget" class="text-xs text-gray-500 w-8">0%</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs w-32 text-gray-400">New Deliverables</span>
+                                <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
+                                    <div id="bar-deliverables" class="bg-purple-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+                                </div>
+                                <span id="pct-deliverables" class="text-xs text-gray-500 w-8">0%</span>
+                            </div>
                         </div>
-                        <span id="pct-features" class="text-xs text-gray-500 w-8">0%</span>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs w-32 text-gray-400">Design Changes</span>
-                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
-                            <div id="bar-design" class="bg-orange-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
+
+                    <!-- Client Creep Leaderboard -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-400 mb-4">CLIENT CREEP LEADERBOARD</h4>
+                        <div id="client-leaderboard" class="space-y-2">
+                            <div class="text-center text-gray-600 py-4 text-sm">Name clients in the analyzer to track per-client creep</div>
                         </div>
-                        <span id="pct-design" class="text-xs text-gray-500 w-8">0%</span>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs w-32 text-gray-400">Timeline Extensions</span>
-                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
-                            <div id="bar-timeline" class="bg-yellow-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
-                        </div>
-                        <span id="pct-timeline" class="text-xs text-gray-500 w-8">0%</span>
+                </div>
+
+                <!-- Weekly Trend -->
+                <div class="mt-8">
+                    <h4 class="text-sm font-medium text-gray-400 mb-4">WEEKLY TREND</h4>
+                    <div class="flex items-end gap-2 h-24">
+                        <div id="trend-bars" class="flex items-end gap-2 w-full h-full"></div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs w-32 text-gray-400">Budget Implications</span>
-                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
-                            <div id="bar-budget" class="bg-blue-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
-                        </div>
-                        <span id="pct-budget" class="text-xs text-gray-500 w-8">0%</span>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs w-32 text-gray-400">New Deliverables</span>
-                        <div class="flex-1 bg-white/5 rounded-full h-4 overflow-hidden">
-                            <div id="bar-deliverables" class="bg-purple-500 h-full rounded-full transition-all duration-1000" style="width:0%"></div>
-                        </div>
-                        <span id="pct-deliverables" class="text-xs text-gray-500 w-8">0%</span>
-                    </div>
+                    <div id="trend-labels" class="flex gap-2 mt-1"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- History -->
+    <section id="history" class="py-20 px-6">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-3xl font-bold">Scope Log</h2>
+                    <p class="text-gray-400 text-sm mt-1">All analyses, newest first</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="exportCSV()" class="text-sm text-gray-400 hover:text-white transition">📊 Export CSV</button>
+                    <button onclick="clearHistory()" class="text-sm text-gray-500 hover:text-red-400 transition">🗑️ Clear</button>
+                </div>
+            </div>
+
+            <div id="history-list" class="space-y-2">
+                <div id="history-empty" class="text-center text-gray-600 py-12">
+                    <div class="text-4xl mb-3">🛡️</div>
+                    <div>No analyses yet. Run the detector above to start tracking.</div>
                 </div>
             </div>
         </div>
@@ -299,11 +350,18 @@
                             <td class="py-3 px-4 text-center text-gray-600">✗</td>
                         </tr>
                         <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">Contract analysis</td>
+                            <td class="py-3 px-4">Contract auto-parsing</td>
+                            <td class="py-3 px-4 text-center text-green-400">✓</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
+                        </tr>
+                        <tr class="border-b border-white/5">
+                            <td class="py-3 px-4">Semantic matching</td>
                             <td class="py-3 px-4 text-center text-green-400">✓</td>
                             <td class="py-3 px-4 text-center text-yellow-400">~</td>
                             <td class="py-3 px-4 text-center text-gray-600">✗</td>
-                            <td class="py-3 px-4 text-center text-yellow-400">~</td>
+                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
                         </tr>
                         <tr class="border-b border-white/5">
                             <td class="py-3 px-4">Pushback scripts</td>
@@ -313,21 +371,14 @@
                             <td class="py-3 px-4 text-center text-gray-600">✗</td>
                         </tr>
                         <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">Creep scoring (0-100)</td>
-                            <td class="py-3 px-4 text-center text-green-400">✓</td>
-                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
-                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
-                            <td class="py-3 px-4 text-center text-gray-600">✗</td>
-                        </tr>
-                        <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">Pattern tracking over time</td>
+                            <td class="py-3 px-4">Client creep tracking</td>
                             <td class="py-3 px-4 text-center text-green-400">✓</td>
                             <td class="py-3 px-4 text-center text-gray-600">✗</td>
                             <td class="py-3 px-4 text-center text-yellow-400">~</td>
                             <td class="py-3 px-4 text-center text-gray-600">✗</td>
                         </tr>
                         <tr class="border-b border-white/5">
-                            <td class="py-3 px-4">Privacy-first (client-side)</td>
+                            <td class="py-3 px-4">PDF scope reports</td>
                             <td class="py-3 px-4 text-center text-green-400">✓</td>
                             <td class="py-3 px-4 text-center text-gray-600">✗</td>
                             <td class="py-3 px-4 text-center text-gray-600">✗</td>
@@ -358,10 +409,11 @@
                     <p class="text-gray-500 text-sm mb-6">Try it out</p>
                     <ul class="space-y-3 text-sm text-gray-300">
                         <li class="flex items-center gap-2"><span class="text-green-400">✓</span> 5 analyses/month</li>
-                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Basic creep detection</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Contract parsing</li>
                         <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Creep scoring</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Scope log (20 entries)</li>
                         <li class="flex items-center gap-2 text-gray-600"><span>✗</span> Pushback scripts</li>
-                        <li class="flex items-center gap-2 text-gray-600"><span>✗</span> Scope log</li>
+                        <li class="flex items-center gap-2 text-gray-600"><span>✗</span> PDF reports</li>
                     </ul>
                 </div>
                 <div class="glass rounded-2xl p-8 border-orange-500/30 glow relative">
@@ -372,11 +424,12 @@
                     <ul class="space-y-3 text-sm text-gray-300">
                         <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Unlimited analyses</li>
                         <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Pushback scripts (3 tones)</li>
-                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Full scope log</li>
-                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Pattern detection</li>
-                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Cost estimation</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Full scope log + history</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Client tracking</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> PDF scope reports</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> CSV export</li>
                     </ul>
-                    <button class="w-full mt-6 bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl font-semibold transition">Join Waitlist</button>
+                    <button onclick="document.getElementById('waitlist-section').scrollIntoView({behavior:'smooth'})" class="w-full mt-6 bg-orange-600 hover:bg-orange-500 text-white py-3 rounded-xl font-semibold transition">Join Waitlist</button>
                 </div>
                 <div class="glass rounded-2xl p-8">
                     <h3 class="text-xl font-bold mb-2">Team</h3>
@@ -388,6 +441,7 @@
                         <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Team sharing</li>
                         <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Client reports</li>
                         <li class="flex items-center gap-2"><span class="text-green-400">✓</span> ContractPilot integration</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Priority support</li>
                     </ul>
                 </div>
             </div>
@@ -398,7 +452,7 @@
     <section class="py-20 px-6 bg-white/[0.01]">
         <div class="max-w-4xl mx-auto text-center">
             <h2 class="text-3xl font-bold mb-3">Part of the Freelancer Stack</h2>
-            <p class="text-gray-400 mb-10">9 tools covering every freelancer workflow. All by OpenSphere Labs.</p>
+            <p class="text-gray-400 mb-10">10 tools covering every freelancer workflow. All by OpenSphere Labs.</p>
             <div class="flex flex-wrap items-center justify-center gap-3 text-sm">
                 <a href="https://atalovesyou.github.io/intakebot/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">🤖 IntakeBot</a>
                 <span class="text-gray-600">→</span>
@@ -411,6 +465,12 @@
                 <a href="https://atalovesyou.github.io/invoicepilot/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">🧾 InvoicePilot</a>
                 <span class="text-gray-600">→</span>
                 <a href="https://atalovesyou.github.io/reviewagent/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">⭐ ReviewAgent</a>
+            </div>
+            <div class="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm">
+                <a href="https://atalovesyou.github.io/unslop-ai/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">🧹 UnSlop.ai</a>
+                <a href="https://atalovesyou.github.io/immigranttax-ai/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">🏦 ImmigrantTax</a>
+                <a href="https://atalovesyou.github.io/nameforge/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">💡 NameForge</a>
+                <a href="https://atalovesyou.github.io/proposalpilot/" target="_blank" class="glass px-4 py-2 rounded-lg hover:bg-white/10 transition">📄 ProposalPilot</a>
             </div>
         </div>
     </section>
@@ -431,12 +491,23 @@
         </div>
     </section>
 
+    <!-- Detail Modal -->
+    <div id="detail-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4" onclick="if(event.target===this)closeModal()">
+        <div class="bg-[#111118] border border-white/10 rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold">Analysis Detail</h3>
+                <button onclick="closeModal()" class="text-gray-500 hover:text-white text-xl">&times;</button>
+            </div>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="py-10 px-6 border-t border-white/5">
         <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
             <div class="flex items-center gap-2">
                 <span>🛡️</span>
-                <span>ScopeGuard by <a href="https://atalovesyou.github.io/opensphere-labs/" class="text-gray-400 hover:text-white transition">OpenSphere Labs</a></span>
+                <span>ScopeGuard v2.0 by <a href="https://atalovesyou.github.io/opensphere-labs/" class="text-gray-400 hover:text-white transition">OpenSphere Labs</a></span>
             </div>
             <div class="flex items-center gap-6">
                 <a href="https://atalovesyou.github.io/opensphere-labs/" class="hover:text-white transition">All Products</a>
@@ -446,41 +517,762 @@
     </footer>
 
     <script>
-    // ===== SCOPE CREEP ANALYZER =====
+    // ===== SCOPE CREEP ANALYZER v2.0 =====
+
+    // --- Data Store ---
+    let scopeLog = JSON.parse(localStorage.getItem('sg-log') || '[]');
+    let categoryTotals = JSON.parse(localStorage.getItem('sg-cats') || '{"features":0,"design":0,"timeline":0,"budget":0,"deliverables":0}');
+    let clientData = JSON.parse(localStorage.getItem('sg-clients') || '{}');
+
+    // --- Creep Signals ---
     const CREEP_SIGNALS = {
         features: {
-            keywords: ['add', 'additional', 'extra', 'also need', 'could you also', 'while you\'re at it', 'one more thing', 'just need', 'also include', 'plus', 'along with', 'it would be great if', 'can we throw in', 'might as well', 'since you\'re already', 'throw in', 'bonus', 'extra feature', 'one more feature', 'additional page', 'another page', 'more pages', 'extra section', 'another section', 'new functionality', 'add a feature'],
+            keywords: ['add', 'additional', 'extra', 'also need', 'could you also', 'while you\'re at it', 'one more thing', 'just need', 'also include', 'plus', 'along with', 'it would be great if', 'can we throw in', 'might as well', 'since you\'re already', 'throw in', 'bonus', 'extra feature', 'one more feature', 'additional page', 'another page', 'more pages', 'extra section', 'another section', 'new functionality', 'add a feature', 'also want', 'and also', 'in addition', 'on top of that', 'i know this wasn\'t in the scope'],
+            phrases: ['can you also', 'could you also', 'while you\'re at it', 'one more thing', 'it would be great if', 'can we throw in', 'might as well', 'since you\'re already', 'i know this wasn\'t', 'on top of', 'and also need'],
             weight: 1.0,
-            label: 'Extra Features'
+            label: 'Extra Features',
+            color: 'red'
         },
         design: {
-            keywords: ['redesign', 'change the design', 'update the look', 'make it look like', 'revamp', 'rebrand', 'change colors', 'different layout', 'new style', 'modernize', 'refresh', 'new design', 'different design', 'redesign the', 'change the layout', 'update branding', 'new brand'],
+            keywords: ['redesign', 'change the design', 'update the look', 'make it look like', 'revamp', 'rebrand', 'change colors', 'different layout', 'new style', 'modernize', 'refresh', 'new design', 'different design', 'change the layout', 'update branding', 'new brand', 'look more', 'feel more', 'visual overhaul', 'completely different', 'start over', 'go in a different direction'],
+            phrases: ['make it look like', 'make it more', 'change the design', 'go in a different direction', 'visual overhaul', 'completely different look'],
             weight: 0.8,
-            label: 'Design Changes'
+            label: 'Design Changes',
+            color: 'orange'
         },
         timeline: {
-            keywords: ['rush', 'urgent', 'asap', 'by tomorrow', 'need it faster', 'can you finish', 'sooner', 'deadline moved', 'earlier', 'quick turnaround', 'express', 'priority', 'immediately', 'right away', 'no later than', 'can we move up'],
+            keywords: ['rush', 'urgent', 'asap', 'by tomorrow', 'need it faster', 'can you finish', 'sooner', 'deadline moved', 'earlier', 'quick turnaround', 'express', 'priority', 'immediately', 'right away', 'no later than', 'can we move up', 'need this by', 'time-sensitive', 'pushed up', 'moved forward'],
+            phrases: ['need it by', 'can you finish by', 'can we move up', 'deadline moved', 'need this asap', 'right away', 'no later than'],
             weight: 0.7,
-            label: 'Timeline Pressure'
+            label: 'Timeline Pressure',
+            color: 'yellow'
         },
         budget: {
-            keywords: ['discount', 'cheaper', 'lower price', 'reduce the cost', 'can you do it for less', 'budget is tight', 'free of charge', 'no additional cost', 'included in the price', 'won\'t charge extra', 'at no cost', 'complimentary', 'throw in for free', 'absorb the cost', 'cover this too'],
+            keywords: ['discount', 'cheaper', 'lower price', 'reduce the cost', 'can you do it for less', 'budget is tight', 'free of charge', 'no additional cost', 'included in the price', 'won\'t charge extra', 'at no cost', 'complimentary', 'throw in for free', 'absorb the cost', 'cover this too', 'waive the fee', 'no extra charge', 'we already paid for'],
+            phrases: ['can you do it for less', 'no additional cost', 'free of charge', 'at no cost', 'throw in for free', 'absorb the cost', 'we already paid'],
             weight: 0.9,
-            label: 'Budget Pressure'
+            label: 'Budget Pressure',
+            color: 'blue'
         },
         deliverables: {
-            keywords: ['also create', 'need a logo', 'write the copy', 'create content', 'social media', 'marketing materials', 'business card', 'letterhead', 'video', 'animation', 'new deliverable', 'another deliverable', 'additional deliverable', 'separate document', 'new document', 'extra asset'],
+            keywords: ['also create', 'need a logo', 'write the copy', 'create content', 'social media', 'marketing materials', 'business card', 'letterhead', 'video', 'animation', 'new deliverable', 'another deliverable', 'additional deliverable', 'separate document', 'new document', 'extra asset', 'also design', 'also write', 'produce a', 'make a'],
+            phrases: ['also create', 'also design', 'also write', 'need a logo', 'write the copy', 'social media banners', 'produce a video'],
             weight: 1.0,
-            label: 'New Deliverables'
+            label: 'New Deliverables',
+            color: 'purple'
         }
     };
 
-    const SCOPE_KEYWORDS = ['scope', 'deliver', 'include', 'provide', 'build', 'create', 'design', 'develop', 'pages', 'sections', 'features', 'functionality', 'revisions', 'timeline', 'deadline', 'milestone'];
+    // --- Semantic Noun/Verb Groups ---
+    const DELIVERABLE_TERMS = ['logo', 'branding', 'copy', 'content', 'article', 'blog', 'video', 'animation', 'banner', 'card', 'letterhead', 'template', 'graphic', 'icon', 'illustration', 'photography', 'photos', 'images', 'social media', 'marketing', 'seo', 'ads', 'email', 'newsletter', 'brochure', 'flyer', 'poster', 'presentation', 'deck', 'wireframe', 'mockup', 'prototype', 'landing page', 'website', 'app', 'dashboard'];
+    const EXCLUSION_TERMS = ['not included', 'excluded', 'out of scope', 'not part of', 'beyond scope', 'additional cost', 'separate quote', 'extra charge', 'not covered'];
 
-    let scopeLog = JSON.parse(localStorage.getItem('scopeguard-log') || '[]');
-    let categoryTotals = JSON.parse(localStorage.getItem('scopeguard-categories') || '{"features":0,"design":0,"timeline":0,"budget":0,"deliverables":0}');
+    // --- Contract Parser ---
+    function parseContract(text) {
+        const lower = text.toLowerCase();
+        const parsed = { deliverables: [], exclusions: [], timeline: null, revisions: null, raw: text };
 
+        // Extract deliverables from bullet points
+        const bullets = text.match(/[•\-\*]\s*(.+)/g) || [];
+        bullets.forEach(b => {
+            const item = b.replace(/^[•\-\*]\s*/, '').trim();
+            if (item.length > 3 && item.length < 200) {
+                parsed.deliverables.push(item);
+            }
+        });
+
+        // Extract from "Deliverables:" section
+        const delSection = text.match(/deliverables?\s*:?\s*([\s\S]*?)(?:\n\n|timeline|revisions|not included|exclusions|$)/i);
+        if (delSection) {
+            const items = delSection[1].split(/\n/).filter(l => l.trim().length > 3);
+            items.forEach(item => {
+                const clean = item.replace(/^[•\-\*\d.]+\s*/, '').trim();
+                if (clean.length > 3 && !parsed.deliverables.some(d => d.toLowerCase().includes(clean.toLowerCase().substring(0, 15)))) {
+                    parsed.deliverables.push(clean);
+                }
+            });
+        }
+
+        // Extract exclusions
+        const notIncMatch = lower.match(/not included\s*:?\s*([\s\S]*?)(?:\n\n|timeline|$)/i);
+        if (notIncMatch) {
+            const items = notIncMatch[1].split(/[,\n]/).map(s => s.replace(/^[•\-\*]\s*/, '').trim()).filter(s => s.length > 2);
+            parsed.exclusions.push(...items);
+        }
+        const exclMatch = lower.match(/exclud(?:ed|es)\s*:?\s*([\s\S]*?)(?:\n\n|timeline|$)/i);
+        if (exclMatch) {
+            const items = exclMatch[1].split(/[,\n]/).map(s => s.replace(/^[•\-\*]\s*/, '').trim()).filter(s => s.length > 2);
+            parsed.exclusions.push(...items);
+        }
+
+        // Extract timeline
+        const timelineMatch = text.match(/timeline\s*:?\s*(\d+\s*(?:weeks?|months?|days?|weeks from|months from))/i);
+        if (timelineMatch) parsed.timeline = timelineMatch[1].trim();
+
+        // Extract revision limit
+        const revMatch = text.match(/(\d+)\s*(?:rounds?|revisions?)/i);
+        if (revMatch) parsed.revisions = parseInt(revMatch[1]);
+
+        return parsed;
+    }
+
+    // --- Semantic Sentence Splitter ---
+    function splitSentences(text) {
+        return text.split(/(?<=[.!?])\s+|\n+/).filter(s => s.trim().length > 5);
+    }
+
+    // --- Semantic Matcher ---
+    function semanticMatch(sentence, contractParsed) {
+        const lower = sentence.toLowerCase();
+        const matches = [];
+
+        // Check each deliverable for overlap
+        contractParsed.deliverables.forEach(d => {
+            const dLower = d.toLowerCase();
+            const dWords = dLower.split(/\s+/).filter(w => w.length > 3);
+            const matchedWords = dWords.filter(w => lower.includes(w));
+            if (matchedWords.length >= Math.ceil(dWords.length * 0.4) && matchedWords.length > 0) {
+                matches.push({ type: 'deliverable-match', contract: d, overlap: matchedWords });
+            }
+        });
+
+        // Check exclusions
+        contractParsed.exclusions.forEach(e => {
+            const eLower = e.toLowerCase();
+            const eWords = eLower.split(/\s+/).filter(w => w.length > 3);
+            const matchedWords = eWords.filter(w => lower.includes(w));
+            if (matchedWords.length >= 1 && matchedWords.length / Math.max(eWords.length, 1) >= 0.3) {
+                matches.push({ type: 'exclusion-violation', excluded: e, requested: sentence.trim() });
+            }
+        });
+
+        // Check for deliverable terms not in contract
+        DELIVERABLE_TERMS.forEach(term => {
+            if (lower.includes(term)) {
+                const inContract = contractParsed.deliverables.some(d => d.toLowerCase().includes(term)) ||
+                                   contractParsed.raw.toLowerCase().includes(term);
+                if (!inContract) {
+                    matches.push({ type: 'new-deliverable-term', term, context: sentence.trim() });
+                }
+            }
+        });
+
+        return matches;
+    }
+
+    // --- Main Analyzer ---
+    function analyzeCreep() {
+        const contract = document.getElementById('contract-input').value.trim();
+        const message = document.getElementById('message-input').value.trim();
+        const clientName = document.getElementById('client-name').value.trim() || 'Unknown';
+
+        if (!contract || !message) {
+            alert('Please paste both your contract scope and the client message.');
+            return;
+        }
+
+        const msgLower = message.toLowerCase();
+
+        // Parse contract
+        const contractParsed = parseContract(contract);
+        showParsedContract(contractParsed);
+
+        // Split message into sentences
+        const sentences = splitSentences(message);
+
+        // --- Keyword-based detection ---
+        const keywordFindings = [];
+        let keywordScore = 0;
+
+        for (const [category, config] of Object.entries(CREEP_SIGNALS)) {
+            const kwMatches = config.keywords.filter(kw => msgLower.includes(kw));
+            const phraseMatches = config.phrases.filter(p => msgLower.includes(p));
+            const allMatches = [...new Set([...kwMatches, ...phraseMatches])];
+
+            if (allMatches.length > 0) {
+                const phraseBonus = phraseMatches.length * 5;
+                const catScore = Math.min(allMatches.length * config.weight * 18 + phraseBonus, 100);
+                keywordFindings.push({
+                    category,
+                    label: config.label,
+                    score: Math.round(catScore),
+                    matches: allMatches.slice(0, 4),
+                    severity: catScore > 60 ? 'high' : catScore > 30 ? 'medium' : 'low',
+                    color: config.color
+                });
+                keywordScore += catScore * config.weight;
+            }
+        }
+
+        // --- Semantic sentence-level analysis ---
+        const semanticFindings = [];
+        let semanticScore = 0;
+
+        sentences.forEach(sent => {
+            const matches = semanticMatch(sent, contractParsed);
+            matches.forEach(m => {
+                if (m.type === 'exclusion-violation') {
+                    semanticFindings.push({
+                        type: 'violation',
+                        label: '⛔ Scope Violation',
+                        desc: `Client requesting "${m.requested}" — your contract explicitly excludes "${m.excluded}"`,
+                        severity: 'high'
+                    });
+                    semanticScore += 20;
+                } else if (m.type === 'new-deliverable-term') {
+                    semanticFindings.push({
+                        type: 'new-deliverable',
+                        label: '📦 New Deliverable',
+                        desc: `"${m.term}" mentioned but not found in your contract scope`,
+                        severity: 'medium'
+                    });
+                    semanticScore += 12;
+                }
+            });
+        });
+
+        // --- Compute final score ---
+        const rawScore = keywordScore + semanticScore;
+        const creepScore = Math.min(Math.round(rawScore), 100);
+
+        // --- Verdict ---
+        let verdict, verdictDesc, color;
+        if (creepScore >= 70) {
+            verdict = '🚨 Major Scope Creep';
+            verdictDesc = 'Significant out-of-scope requests detected. Multiple items need pushback or a change order.';
+            color = '#ef4444';
+        } else if (creepScore >= 40) {
+            verdict = '⚠️ Moderate Creep Risk';
+            verdictDesc = 'Some requests may be outside scope. Review each item carefully before responding.';
+            color = '#f59e0b';
+        } else if (creepScore >= 15) {
+            verdict = '👀 Minor Request';
+            verdictDesc = 'Small ask that may be within scope. Quick check recommended.';
+            color = '#3b82f6';
+        } else {
+            verdict = '✅ Looks In Scope';
+            verdictDesc = 'This message appears to be within your agreed scope. No action needed.';
+            color = '#22c55e';
+        }
+
+        // --- Display Results ---
+        document.getElementById('results').classList.remove('hidden');
+        document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // Animate score ring
+        const scoreCircle = document.getElementById('score-circle');
+        const circumference = 377;
+        const offset = circumference - (creepScore / 100) * circumference;
+        scoreCircle.style.stroke = color;
+        scoreCircle.style.strokeDashoffset = offset;
+        animateNumber(document.getElementById('score-number'), creepScore);
+
+        document.getElementById('verdict-title').textContent = verdict;
+        document.getElementById('verdict-title').style.color = color;
+        document.getElementById('verdict-desc').textContent = verdictDesc;
+
+        // Contract summary
+        const csEl = document.getElementById('contract-summary');
+        if (contractParsed.deliverables.length > 0 || contractParsed.exclusions.length > 0) {
+            csEl.classList.remove('hidden');
+            csEl.innerHTML = `Parsed: ${contractParsed.deliverables.length} deliverables, ${contractParsed.exclusions.length} exclusions${contractParsed.timeline ? ', timeline: ' + contractParsed.timeline : ''}${contractParsed.revisions ? ', ' + contractParsed.revisions + ' revisions' : ''}`;
+        } else {
+            csEl.classList.add('hidden');
+        }
+
+        // Tags
+        const allFindings = [...keywordFindings, ...semanticFindings];
+        document.getElementById('creep-tags').innerHTML = keywordFindings.map(f =>
+            `<span class="px-3 py-1 rounded-full text-xs font-medium bg-${f.color}-500/20 text-${f.color}-300">${f.label} (${f.score || '—'})</span>`
+        ).join('') + semanticFindings.map(f =>
+            `<span class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-300">${f.label}</span>`
+        ).join('');
+
+        // Flagged items
+        const flaggedEl = document.getElementById('flagged-items');
+        flaggedEl.innerHTML = '';
+        keywordFindings.forEach(f => {
+            flaggedEl.innerHTML += `
+                <div class="${f.severity === 'high' ? 'creep-high' : f.severity === 'medium' ? 'creep-medium' : 'creep-low'} rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-medium text-sm">${f.label}</span>
+                        <span class="text-xs font-bold text-${f.color}-400">${f.score}/100</span>
+                    </div>
+                    <div class="text-xs text-gray-400">Triggered: "${f.matches.join('", "')}"</div>
+                </div>`;
+        });
+        semanticFindings.forEach(f => {
+            flaggedEl.innerHTML += `
+                <div class="${f.severity === 'high' ? 'creep-high' : 'creep-medium'} rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-medium text-sm">${f.label}</span>
+                        <span class="text-xs font-bold ${f.severity === 'high' ? 'text-red-400' : 'text-yellow-400'}">${f.severity.toUpperCase()}</span>
+                    </div>
+                    <div class="text-xs text-gray-400">${f.desc}</div>
+                </div>`;
+        });
+        if (keywordFindings.length === 0 && semanticFindings.length === 0) {
+            flaggedEl.innerHTML = '<div class="text-center text-gray-500 py-4">No scope creep detected 🎉</div>';
+        }
+
+        // Pushback scripts
+        const scriptsEl = document.getElementById('response-scripts');
+        const scripts = generatePushback(keywordFindings, semanticFindings);
+        scriptsEl.innerHTML = '';
+        scripts.forEach((s, i) => {
+            const id = 'script-' + i;
+            scriptsEl.innerHTML += `
+                <div class="bg-white/5 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-gray-400">${s.tone}</span>
+                        <button onclick="copyScript('${id}')" class="text-xs text-orange-400 hover:text-orange-300 transition">Copy</button>
+                    </div>
+                    <p id="${id}" class="text-sm text-gray-300 leading-relaxed">${s.text}</p>
+                </div>`;
+        });
+
+        // Contract match panel
+        const cmEl = document.getElementById('contract-match-items');
+        cmEl.innerHTML = '';
+        if (contractParsed.deliverables.length > 0) {
+            cmEl.innerHTML += `<div class="text-sm font-medium text-gray-300 mb-2">📋 Your deliverables:</div>`;
+            contractParsed.deliverables.forEach(d => {
+                cmEl.innerHTML += `<div class="text-xs text-gray-400 bg-white/5 rounded px-3 py-2 mb-1">• ${d}</div>`;
+            });
+        }
+        if (contractParsed.exclusions.length > 0) {
+            cmEl.innerHTML += `<div class="text-sm font-medium text-gray-300 mt-3 mb-2">🚫 Excluded from contract:</div>`;
+            contractParsed.exclusions.forEach(e => {
+                cmEl.innerHTML += `<div class="text-xs text-red-400/70 bg-red-500/5 rounded px-3 py-2 mb-1">• ${e}</div>`;
+            });
+        }
+        if (semanticFindings.length > 0) {
+            cmEl.innerHTML += `<div class="text-sm font-medium text-gray-300 mt-3 mb-2">🔗 Semantic matches:</div>`;
+            semanticFindings.forEach(f => {
+                cmEl.innerHTML += `<div class="text-xs bg-white/5 rounded px-3 py-2 mb-1">${f.label}: ${f.desc}</div>`;
+            });
+        }
+        if (contractParsed.deliverables.length === 0 && contractParsed.exclusions.length === 0) {
+            cmEl.innerHTML = '<div class="text-center text-gray-500 py-4">Contract parsing found no structured deliverables — try pasting a bulleted scope section.</div>';
+        }
+
+        // --- Log Entry ---
+        const entry = {
+            id: Date.now(),
+            date: new Date().toISOString(),
+            client: clientName,
+            score: creepScore,
+            verdict,
+            categories: keywordFindings.map(f => f.label),
+            violations: semanticFindings.filter(f => f.type === 'violation').length,
+            newDeliverables: semanticFindings.filter(f => f.type === 'new-deliverable').length,
+            messagePreview: message.substring(0, 120) + (message.length > 120 ? '...' : ''),
+            contractPreview: contract.substring(0, 60) + '...',
+            fullMessage: message,
+            fullContract: contract,
+            parsedContract: { deliverables: contractParsed.deliverables, exclusions: contractParsed.exclusions, timeline: contractParsed.timeline, revisions: contractParsed.revisions },
+            findings: keywordFindings.map(f => ({ label: f.label, score: f.score, matches: f.matches, severity: f.severity })),
+            semanticFindings: semanticFindings.map(f => ({ type: f.type, label: f.label, desc: f.desc })),
+            scripts: scripts.map(s => ({ tone: s.tone, text: s.text }))
+        };
+
+        scopeLog.unshift(entry);
+        if (scopeLog.length > 100) scopeLog = scopeLog.slice(0, 100);
+        localStorage.setItem('sg-log', JSON.stringify(scopeLog));
+
+        // Update category totals
+        keywordFindings.forEach(f => { categoryTotals[f.category] = (categoryTotals[f.category] || 0) + 1; });
+        localStorage.setItem('sg-cats', JSON.stringify(categoryTotals));
+
+        // Update client data
+        if (!clientData[clientName]) clientData[clientName] = { count: 0, totalScore: 0, creepCount: 0, lastDate: '' };
+        clientData[clientName].count++;
+        clientData[clientName].totalScore += creepScore;
+        clientData[clientName].lastDate = entry.date;
+        if (creepScore >= 40) clientData[clientName].creepCount++;
+        localStorage.setItem('sg-clients', JSON.stringify(clientData));
+
+        updateDashboard();
+        updateHistory();
+    }
+
+    // --- Show Parsed Contract Tags ---
+    function showParsedContract(parsed) {
+        const el = document.getElementById('parsed-contract');
+        const items = document.getElementById('parsed-items');
+        const tags = [];
+        parsed.deliverables.slice(0, 6).forEach(d => tags.push(`<span class="text-[10px] bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded">${d.substring(0, 30)}${d.length > 30 ? '...' : ''}</span>`));
+        parsed.exclusions.forEach(e => tags.push(`<span class="text-[10px] bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded">${e.substring(0, 25)}${e.length > 25 ? '...' : ''}</span>`));
+        if (parsed.timeline) tags.push(`<span class="text-[10px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded">⏰ ${parsed.timeline}</span>`);
+        if (parsed.revisions) tags.push(`<span class="text-[10px] bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded">🔄 ${parsed.revisions} revisions</span>`);
+        if (tags.length > 0) {
+            el.classList.remove('hidden');
+            items.innerHTML = tags.join(' ');
+        }
+    }
+
+    // --- Generate Pushback ---
+    function generatePushback(findings, semanticFindings) {
+        const hasFeatures = findings.some(f => f.category === 'features');
+        const hasBudget = findings.some(f => f.category === 'budget');
+        const hasTimeline = findings.some(f => f.category === 'timeline');
+        const hasDeliverables = findings.some(f => f.category === 'deliverables') || semanticFindings.some(f => f.type === 'new-deliverable');
+        const hasViolations = semanticFindings.some(f => f.type === 'violation');
+        const scripts = [];
+
+        if (hasViolations) {
+            scripts.push({
+                tone: '🤝 Collaborative',
+                text: `Thanks for the ideas! A few of these items were specifically called out as outside our project scope — things like the ones you mentioned. I'd love to help with them though! Want me to put together a quick add-on quote so we can get these handled properly?`
+            });
+        } else {
+            scripts.push({
+                tone: '🤝 Collaborative',
+                text: `Thanks for sharing these thoughts! I love the enthusiasm. A few items fall outside our original scope — want me to put together a quick add-on quote for the extras? Happy to work out a bundle price since we're already in motion.`
+            });
+        }
+
+        if (hasFeatures || hasDeliverables) {
+            scripts.push({
+                tone: '📋 Professional',
+                text: `Great suggestions! I've reviewed these against our project scope, and a few items go beyond what we outlined${hasDeliverables ? ' — particularly the new deliverables' : ''}. I can absolutely handle these — shall I send over an updated scope with pricing for the additions?`
+            });
+        }
+
+        if (hasBudget) {
+            scripts.push({
+                tone: '💪 Firm',
+                text: `I appreciate the trust! The items you mentioned are outside our agreed scope, so they'd need a separate estimate. I want to make sure I can give each piece the attention it deserves without compromising the core project quality. Want me to quote the extras?`
+            });
+        }
+
+        if (hasTimeline) {
+            scripts.push({
+                tone: '⏰ Realistic',
+                text: `I hear you on the timeline. To hit that date without cutting corners on quality, we'd need to either reduce scope or add a rush fee to prioritize. Want to chat about which approach works best for you?`
+            });
+        }
+
+        if (scripts.length === 0) {
+            scripts.push({
+                tone: '✅ All Clear',
+                text: `No scope creep detected — you're good to proceed as planned!`
+            });
+        }
+
+        return scripts.slice(0, 3);
+    }
+
+    // --- Tabs ---
+    function switchTab(tab) {
+        ['flagged', 'scripts', 'contract'].forEach(t => {
+            document.getElementById('tab-' + t).className = t === tab ? 'pb-2 text-sm font-medium tab-active' : 'pb-2 text-sm font-medium tab-inactive';
+            document.getElementById('panel-' + t).classList.toggle('hidden', t !== tab);
+        });
+    }
+
+    // --- Dashboard ---
+    function updateDashboard() {
+        const total = scopeLog.length;
+        const creepCount = scopeLog.filter(e => e.score >= 40).length;
+        const estCost = creepCount * 450;
+        const avgScore = total > 0 ? Math.round(scopeLog.reduce((s, e) => s + e.score, 0) / total) : 0;
+        const clientCount = Object.keys(clientData).filter(k => k !== 'Unknown').length;
+
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-creep').textContent = creepCount;
+        document.getElementById('stat-cost').textContent = '$' + estCost.toLocaleString();
+        document.getElementById('stat-clients').textContent = clientCount;
+        document.getElementById('stat-avg').textContent = avgScore;
+
+        // Category bars
+        const maxCat = Math.max(...Object.values(categoryTotals), 1);
+        for (const [cat, count] of Object.entries(categoryTotals)) {
+            const pct = Math.round((count / maxCat) * 100);
+            const bar = document.getElementById('bar-' + cat);
+            const label = document.getElementById('pct-' + cat);
+            if (bar) bar.style.width = pct + '%';
+            if (label) label.textContent = count > 0 ? pct + '%' : '0%';
+        }
+
+        // Client leaderboard
+        const lbEl = document.getElementById('client-leaderboard');
+        const clients = Object.entries(clientData).filter(([k]) => k !== 'Unknown').sort((a, b) => b[1].creepCount - a[1].creepCount);
+        if (clients.length > 0) {
+            lbEl.innerHTML = clients.slice(0, 5).map(([name, data]) => {
+                const avg = Math.round(data.totalScore / data.count);
+                const barWidth = Math.round((data.creepCount / Math.max(data.count, 1)) * 100);
+                return `
+                    <div class="flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2">
+                        <span class="text-sm font-medium w-32 truncate">${name}</span>
+                        <div class="flex-1 bg-white/5 rounded-full h-3 overflow-hidden">
+                            <div class="h-full rounded-full ${barWidth > 60 ? 'bg-red-500' : barWidth > 30 ? 'bg-yellow-500' : 'bg-green-500'}" style="width:${barWidth}%"></div>
+                        </div>
+                        <span class="text-xs text-gray-500 w-20 text-right">${data.creepCount}/${data.count} creep</span>
+                        <span class="text-xs font-mono ${avg >= 60 ? 'text-red-400' : avg >= 30 ? 'text-yellow-400' : 'text-green-400'} w-10 text-right">avg ${avg}</span>
+                    </div>`;
+            }).join('');
+        } else {
+            lbEl.innerHTML = '<div class="text-center text-gray-600 py-4 text-sm">Name clients in the analyzer to track per-client creep</div>';
+        }
+
+        // Weekly trend
+        updateTrend();
+    }
+
+    function updateTrend() {
+        const now = new Date();
+        const weeks = [];
+        for (let i = 7; i >= 0; i--) {
+            const weekStart = new Date(now);
+            weekStart.setDate(weekStart.getDate() - i * 7);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 7);
+            const entries = scopeLog.filter(e => {
+                const d = new Date(e.date);
+                return d >= weekStart && d < weekEnd;
+            });
+            weeks.push({
+                label: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                count: entries.length,
+                avgScore: entries.length > 0 ? Math.round(entries.reduce((s, e) => s + e.score, 0) / entries.length) : 0
+            });
+        }
+
+        const maxCount = Math.max(...weeks.map(w => w.count), 1);
+        const barsEl = document.getElementById('trend-bars');
+        const labelsEl = document.getElementById('trend-labels');
+        barsEl.innerHTML = weeks.map(w => {
+            const h = Math.round((w.count / maxCount) * 100);
+            const color = w.avgScore >= 60 ? 'bg-red-500' : w.avgScore >= 30 ? 'bg-yellow-500' : w.count > 0 ? 'bg-green-500' : 'bg-white/10';
+            return `<div class="flex-1 flex flex-col items-center justify-end h-full">
+                <div class="text-[10px] text-gray-500 mb-1">${w.count || ''}</div>
+                <div class="${color} w-full rounded-t trend-bar" style="height:${Math.max(h, 4)}%"></div>
+            </div>`;
+        }).join('');
+        labelsEl.innerHTML = weeks.map(w => `<div class="flex-1 text-center text-[10px] text-gray-600">${w.label}</div>`).join('');
+    }
+
+    // --- History ---
+    function updateHistory() {
+        const listEl = document.getElementById('history-list');
+        const emptyEl = document.getElementById('history-empty');
+
+        if (scopeLog.length === 0) {
+            emptyEl.classList.remove('hidden');
+            listEl.innerHTML = '';
+            listEl.appendChild(emptyEl);
+            return;
+        }
+
+        emptyEl.classList.add('hidden');
+        listEl.innerHTML = scopeLog.map((entry, i) => {
+            const date = new Date(entry.date);
+            const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            const scoreColor = entry.score >= 70 ? 'text-red-400' : entry.score >= 40 ? 'text-yellow-400' : 'text-green-400';
+            const scoreBg = entry.score >= 70 ? 'bg-red-500/10' : entry.score >= 40 ? 'bg-yellow-500/10' : 'bg-green-500/10';
+            const client = entry.client || 'Unknown';
+            return `
+                <div class="glass rounded-xl px-4 py-3 hover:bg-white/5 transition cursor-pointer flex items-center gap-4" onclick="showDetail(${i})">
+                    <div class="${scoreBg} rounded-lg px-3 py-1.5 text-center min-w-[50px]">
+                        <div class="${scoreColor} font-extrabold text-lg">${entry.score}</div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-sm font-medium">${entry.verdict.replace(/[^\w\s]/g, '').trim()}</span>
+                            <span class="text-xs text-gray-600">${timeStr}</span>
+                        </div>
+                        <div class="text-xs text-gray-500 truncate">${client} — ${entry.messagePreview}</div>
+                    </div>
+                    <div class="flex gap-1 shrink-0">
+                        ${(entry.categories || []).slice(0, 2).map(c => `<span class="text-[10px] bg-white/10 px-1.5 py-0.5 rounded">${c}</span>`).join('')}
+                        ${entry.violations ? `<span class="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">${entry.violations} violation${entry.violations > 1 ? 's' : ''}</span>` : ''}
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // --- Detail Modal ---
+    function showDetail(index) {
+        const entry = scopeLog[index];
+        if (!entry) return;
+
+        const modal = document.getElementById('detail-modal');
+        const content = document.getElementById('modal-content');
+        const date = new Date(entry.date);
+        const dateStr = date.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' }) + ' at ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const scoreColor = entry.score >= 70 ? '#ef4444' : entry.score >= 40 ? '#f59e0b' : '#22c55e';
+
+        content.innerHTML = `
+            <div class="space-y-4">
+                <div class="flex items-center gap-4">
+                    <div class="text-4xl font-extrabold" style="color:${scoreColor}">${entry.score}</div>
+                    <div>
+                        <div class="font-semibold">${entry.verdict}</div>
+                        <div class="text-sm text-gray-500">${dateStr} · ${(entry.client || 'Unknown')}</div>
+                    </div>
+                </div>
+                ${entry.categories && entry.categories.length > 0 ? `<div class="flex flex-wrap gap-2">${entry.categories.map(c => `<span class="text-xs bg-white/10 px-2 py-1 rounded">${c}</span>`).join('')}</div>` : ''}
+                ${entry.violations ? `<div class="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-sm text-red-300">${entry.violations} scope violation${entry.violations > 1 ? 's' : ''} detected</div>` : ''}
+                <div>
+                    <div class="text-sm font-medium text-gray-300 mb-2">Client Message:</div>
+                    <div class="bg-white/5 rounded-lg p-3 text-sm text-gray-400 max-h-40 overflow-y-auto">${(entry.fullMessage || entry.messagePreview).replace(/\n/g, '<br>')}</div>
+                </div>
+                ${entry.findings && entry.findings.length > 0 ? `<div>
+                    <div class="text-sm font-medium text-gray-300 mb-2">Flagged Issues:</div>
+                    ${entry.findings.map(f => `<div class="${f.severity === 'high' ? 'creep-high' : f.severity === 'medium' ? 'creep-medium' : 'creep-low'} rounded-lg p-2 mb-2">
+                        <span class="text-sm font-medium">${f.label}</span> <span class="text-xs text-gray-500">(${f.score}/100)</span>
+                        <div class="text-xs text-gray-400 mt-1">Matched: "${(f.matches || []).join('", "')}"</div>
+                    </div>`).join('')}
+                </div>` : ''}
+                ${entry.semanticFindings && entry.semanticFindings.length > 0 ? `<div>
+                    <div class="text-sm font-medium text-gray-300 mb-2">Semantic Analysis:</div>
+                    ${entry.semanticFindings.map(f => `<div class="bg-white/5 rounded-lg p-2 mb-2 text-sm text-gray-400">${f.label}: ${f.desc}</div>`).join('')}
+                </div>` : ''}
+                ${entry.scripts && entry.scripts.length > 0 ? `<div>
+                    <div class="text-sm font-medium text-gray-300 mb-2">Pushback Scripts:</div>
+                    ${entry.scripts.map(s => `<div class="bg-white/5 rounded-lg p-3 mb-2">
+                        <div class="text-xs text-gray-500 mb-1">${s.tone}</div>
+                        <div class="text-sm text-gray-300">${s.text}</div>
+                    </div>`).join('')}
+                </div>` : ''}
+                <button onclick="deleteEntry(${index})" class="text-xs text-red-400 hover:text-red-300 transition">Delete this entry</button>
+            </div>`;
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('detail-modal').classList.add('hidden');
+    }
+
+    function deleteEntry(index) {
+        scopeLog.splice(index, 1);
+        localStorage.setItem('sg-log', JSON.stringify(scopeLog));
+        closeModal();
+        updateDashboard();
+        updateHistory();
+    }
+
+    // --- PDF Report ---
+    function exportPDFReport() {
+        if (typeof window.jspdf === 'undefined') {
+            alert('PDF library loading, please try again in a moment.');
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const total = scopeLog.length;
+        const creepCount = scopeLog.filter(e => e.score >= 40).length;
+        const avgScore = total > 0 ? Math.round(scopeLog.reduce((s, e) => s + e.score, 0) / total) : 0;
+
+        // Header
+        doc.setFillColor(10, 10, 15);
+        doc.rect(0, 0, 210, 40, 'F');
+        doc.setTextColor(249, 115, 22);
+        doc.setFontSize(24);
+        doc.text('ScopeGuard Report', 20, 25);
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.text(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }), 20, 34);
+
+        // Stats
+        doc.setTextColor(50, 50, 50);
+        doc.setFontSize(11);
+        let y = 55;
+        doc.text(`Total Analyses: ${total}`, 20, y);
+        doc.text(`Creep Detected: ${creepCount}`, 80, y);
+        doc.text(`Avg Score: ${avgScore}`, 145, y);
+        doc.text(`Est. Cost Protected: $${(creepCount * 450).toLocaleString()}`, 20, y + 8);
+
+        // Client breakdown
+        y = 80;
+        doc.setFontSize(13);
+        doc.setTextColor(30, 30, 30);
+        doc.text('Client Breakdown', 20, y);
+        y += 8;
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        const clients = Object.entries(clientData).filter(([k]) => k !== 'Unknown').sort((a, b) => b[1].creepCount - a[1].creepCount);
+        if (clients.length > 0) {
+            clients.forEach(([name, data]) => {
+                if (y > 270) { doc.addPage(); y = 20; }
+                const avg = Math.round(data.totalScore / data.count);
+                doc.text(`${name}: ${data.count} analyses, ${data.creepCount} creep, avg score ${avg}`, 20, y);
+                y += 6;
+            });
+        } else {
+            doc.text('No named clients tracked.', 20, y);
+            y += 6;
+        }
+
+        // Category breakdown
+        y += 8;
+        if (y > 260) { doc.addPage(); y = 20; }
+        doc.setFontSize(13);
+        doc.setTextColor(30, 30, 30);
+        doc.text('Category Breakdown', 20, y);
+        y += 8;
+        doc.setFontSize(9);
+        doc.setTextColor(80, 80, 80);
+        Object.entries(categoryTotals).forEach(([cat, count]) => {
+            doc.text(`${cat}: ${count} detections`, 20, y);
+            y += 6;
+        });
+
+        // Recent analyses
+        y += 8;
+        if (y > 250) { doc.addPage(); y = 20; }
+        doc.setFontSize(13);
+        doc.setTextColor(30, 30, 30);
+        doc.text('Recent Analyses', 20, y);
+        y += 8;
+        doc.setFontSize(8);
+        scopeLog.slice(0, 20).forEach((entry) => {
+            if (y > 280) { doc.addPage(); y = 20; }
+            const date = new Date(entry.date);
+            const ds = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            doc.setTextColor(80, 80, 80);
+            doc.text(`${ds} | ${(entry.client || 'Unknown')} | Score: ${entry.score} | ${entry.verdict.replace(/[^\w\s]/g, '').trim()}`, 20, y);
+            y += 5;
+        });
+
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text(`ScopeGuard by OpenSphere Labs | Page ${i}/${pageCount}`, 20, 290);
+        }
+
+        doc.save(`scopeguard-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    // --- CSV Export ---
+    function exportCSV() {
+        if (scopeLog.length === 0) { alert('No data to export.'); return; }
+        const headers = ['Date', 'Client', 'Score', 'Verdict', 'Categories', 'Violations', 'Message Preview'];
+        const rows = scopeLog.map(e => [
+            new Date(e.date).toISOString(),
+            `"${(e.client || 'Unknown').replace(/"/g, '""')}"`,
+            e.score,
+            `"${e.verdict.replace(/"/g, '""')}"`,
+            `"${(e.categories || []).join('; ') }"`,
+            e.violations || 0,
+            `"${(e.messagePreview || '').replace(/"/g, '""')}"`
+        ]);
+        const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `scopeguard-log-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+    }
+
+    // --- Helpers ---
     function loadExample() {
+        document.getElementById('client-name').value = 'Acme Corp';
         document.getElementById('contract-input').value = `PROJECT SCOPE — Website Redesign for Acme Corp
 
 Deliverables:
@@ -509,239 +1301,49 @@ Thanks! You're the best 🙌`;
         analyzeCreep();
     }
 
-    function analyzeCreep() {
-        const contract = document.getElementById('contract-input').value.trim();
-        const message = document.getElementById('message-input').value.trim();
-
-        if (!contract || !message) {
-            alert('Please paste both your contract scope and the client message.');
-            return;
-        }
-
-        const msgLower = message.toLowerCase();
-        const contractLower = contract.toLowerCase();
-
-        // Extract scope boundaries
-        const scopeBoundaries = extractScopeBoundaries(contractLower);
-
-        // Detect creep signals
-        const findings = [];
-        let totalScore = 0;
-
-        for (const [category, config] of Object.entries(CREEP_SIGNALS)) {
-            const matches = config.keywords.filter(kw => msgLower.includes(kw));
-            if (matches.length > 0) {
-                const catScore = Math.min(matches.length * config.weight * 20, 100);
-                findings.push({
-                    category,
-                    label: config.label,
-                    score: Math.round(catScore),
-                    matches: matches.slice(0, 3),
-                    severity: catScore > 60 ? 'high' : catScore > 30 ? 'medium' : 'low'
-                });
-                totalScore += catScore * config.weight;
-            }
-        }
-
-        // Check for scope boundary violations
-        const violations = checkScopeViolations(msgLower, scopeBoundaries);
-        totalScore += violations.length * 15;
-
-        // Normalize score
-        const creepScore = Math.min(Math.round(totalScore), 100);
-
-        // Determine verdict
-        let verdict, verdictDesc, color;
-        if (creepScore >= 70) {
-            verdict = '🚨 Major Scope Creep';
-            verdictDesc = 'This message contains significant out-of-scope requests. Flag multiple items for pushback.';
-            color = '#ef4444';
-        } else if (creepScore >= 40) {
-            verdict = '⚠️ Moderate Creep Risk';
-            verdictDesc = 'Some requests may be outside scope. Review each item carefully.';
-            color = '#f59e0b';
-        } else if (creepScore >= 15) {
-            verdict = '👀 Minor Request';
-            verdictDesc = 'Small ask that may be within scope. Quick check recommended.';
-            color = '#3b82f6';
-        } else {
-            verdict = '✅ Looks In Scope';
-            verdictDesc = 'This message appears to be within your agreed scope.';
-            color = '#22c55e';
-        }
-
-        // Display results
-        document.getElementById('results').classList.remove('hidden');
-
-        // Animate score
+    function clearAnalysis() {
+        document.getElementById('contract-input').value = '';
+        document.getElementById('message-input').value = '';
+        document.getElementById('client-name').value = '';
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('parsed-contract').classList.add('hidden');
         const scoreCircle = document.getElementById('score-circle');
-        const circumference = 377;
-        const offset = circumference - (creepScore / 100) * circumference;
-        scoreCircle.style.stroke = color;
-        scoreCircle.style.strokeDashoffset = offset;
+        scoreCircle.style.strokeDashoffset = 377;
+        document.getElementById('score-number').textContent = '0';
+    }
 
-        const scoreNum = document.getElementById('score-number');
-        animateNumber(scoreNum, creepScore);
-
-        document.getElementById('verdict-title').textContent = verdict;
-        document.getElementById('verdict-title').style.color = color;
-        document.getElementById('verdict-desc').textContent = verdictDesc;
-
-        // Tags
-        const tagsEl = document.getElementById('creep-tags');
-        tagsEl.innerHTML = findings.map(f =>
-            `<span class="px-3 py-1 rounded-full text-xs font-medium ${f.severity === 'high' ? 'bg-red-500/20 text-red-300' : f.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-green-500/20 text-green-300'}">${f.label} (${f.score})</span>`
-        ).join('');
-
-        // Flagged items
-        const flaggedEl = document.getElementById('flagged-items');
-        flaggedEl.innerHTML = '';
-        findings.forEach(f => {
-            flaggedEl.innerHTML += `
-                <div class="${f.severity === 'high' ? 'creep-high' : f.severity === 'medium' ? 'creep-medium' : 'creep-low'} rounded-lg p-3">
-                    <div class="flex items-center justify-between mb-1">
-                        <span class="font-medium text-sm">${f.label}</span>
-                        <span class="text-xs font-bold ${f.severity === 'high' ? 'text-red-400' : f.severity === 'medium' ? 'text-yellow-400' : 'text-green-400'}">${f.score}/100</span>
-                    </div>
-                    <div class="text-xs text-gray-400">Triggered: "${f.matches.join('", "')}"</div>
-                </div>`;
-        });
-        if (violations.length > 0) {
-            violations.forEach(v => {
-                flaggedEl.innerHTML += `
-                    <div class="creep-high rounded-lg p-3">
-                        <div class="flex items-center justify-between mb-1">
-                            <span class="font-medium text-sm">⛔ Scope Violation</span>
-                            <span class="text-xs font-bold text-red-400">NEW</span>
-                        </div>
-                        <div class="text-xs text-gray-400">${v}</div>
-                    </div>`;
-            });
-        }
-        if (findings.length === 0 && violations.length === 0) {
-            flaggedEl.innerHTML = '<div class="text-center text-gray-500 py-4">No scope creep detected 🎉</div>';
-        }
-
-        // Pushback scripts
-        const scriptsEl = document.getElementById('response-scripts');
-        scriptsEl.innerHTML = '';
-        if (findings.length > 0 || violations.length > 0) {
-            const scripts = generatePushback(findings, violations);
-            scripts.forEach(s => {
-                scriptsEl.innerHTML += `
-                    <div class="bg-white/5 rounded-lg p-3">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-medium text-gray-400">${s.tone}</span>
-                            <button onclick="copyText(this, \`${s.text.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`)" class="text-xs text-orange-400 hover:text-orange-300 transition">Copy</button>
-                        </div>
-                        <p class="text-sm text-gray-300">${s.text}</p>
-                    </div>`;
-            });
-        } else {
-            scriptsEl.innerHTML = '<div class="text-center text-gray-500 py-4">No pushback needed!</div>';
-        }
-
-        // Log entry
-        const entry = {
-            date: new Date().toISOString(),
-            score: creepScore,
-            verdict,
-            categories: findings.map(f => f.label),
-            messagePreview: message.substring(0, 80) + (message.length > 80 ? '...' : '')
-        };
-        scopeLog.unshift(entry);
-        if (scopeLog.length > 50) scopeLog = scopeLog.slice(0, 50);
-        localStorage.setItem('scopeguard-log', JSON.stringify(scopeLog));
-
-        // Update category totals
-        findings.forEach(f => {
-            categoryTotals[f.category] = (categoryTotals[f.category] || 0) + 1;
-        });
-        localStorage.setItem('scopeguard-categories', JSON.stringify(categoryTotals));
-
+    function clearHistory() {
+        if (!confirm('Clear all analysis history? This cannot be undone.')) return;
+        scopeLog = [];
+        categoryTotals = { features: 0, design: 0, timeline: 0, budget: 0, deliverables: 0 };
+        clientData = {};
+        localStorage.removeItem('sg-log');
+        localStorage.removeItem('sg-cats');
+        localStorage.removeItem('sg-clients');
         updateDashboard();
-        updateScopeLog();
+        updateHistory();
     }
 
-    function extractScopeBoundaries(contractLower) {
-        const boundaries = [];
-        const notIncluded = contractLower.match(/not included[:\s]*([^.\n]+)/g);
-        if (notIncluded) {
-            notIncluded.forEach(m => {
-                const items = m.replace(/not included[:\s]*/i, '').split(/[,;]/);
-                items.forEach(item => {
-                    const cleaned = item.trim();
-                    if (cleaned.length > 2) boundaries.push(cleaned);
-                });
+    function copyScript(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            navigator.clipboard.writeText(el.textContent).then(() => {
+                const btn = el.previousElementSibling?.querySelector('button');
+                if (btn) { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = 'Copy', 1500); }
             });
         }
-        const excluded = contractLower.match(/exclud(?:ed|es)[:\s]*([^.\n]+)/g);
-        if (excluded) {
-            excluded.forEach(m => {
-                const items = m.replace(/exclud(?:ed|es)[:\s]*/i, '').split(/[,;]/);
-                items.forEach(item => {
-                    const cleaned = item.trim();
-                    if (cleaned.length > 2) boundaries.push(cleaned);
-                });
-            });
-        }
-        return boundaries;
     }
 
-    function checkScopeViolations(msgLower, boundaries) {
-        const violations = [];
-        boundaries.forEach(b => {
-            const words = b.split(/\s+/).filter(w => w.length > 3);
-            const matchedWords = words.filter(w => msgLower.includes(w));
-            if (matchedWords.length >= 1 && matchedWords.length / words.length >= 0.4) {
-                violations.push(`Client requesting "${b}" — explicitly excluded from contract`);
-            }
-        });
-        return violations;
-    }
-
-    function generatePushback(findings, violations) {
-        const hasFeatures = findings.some(f => f.category === 'features');
-        const hasBudget = findings.some(f => f.category === 'budget');
-        const hasTimeline = findings.some(f => f.category === 'timeline');
-        const hasDeliverables = findings.some(f => f.category === 'deliverables');
-
-        const scripts = [];
-
-        scripts.push({
-            tone: '🤝 Collaborative',
-            text: `Thanks for the ideas! I love the enthusiasm. A few of these fall outside our original scope — want me to put together a quick add-on quote for the extra items? Happy to work out a bundle price since we're already in motion.`
-        });
-
-        if (hasFeatures || hasDeliverables) {
-            scripts.push({
-                tone: '📋 Professional',
-                text: `Great suggestions! I've reviewed these against our project scope, and a few items (like the new deliverables) go beyond what we outlined. I can absolutely handle these — shall I send over an updated scope with pricing for the additions?`
-            });
+    function joinWaitlist(e) {
+        e.preventDefault();
+        const email = document.getElementById('waitlist-email').value;
+        let waitlist = JSON.parse(localStorage.getItem('sg-waitlist') || '[]');
+        if (!waitlist.includes(email)) {
+            waitlist.push(email);
+            localStorage.setItem('sg-waitlist', JSON.stringify(waitlist));
         }
-
-        if (hasBudget) {
-            scripts.push({
-                tone: '💪 Firm',
-                text: `I appreciate the trust! The items you mentioned are outside our agreed scope, so they'd need a separate estimate. I want to make sure I can give each piece the attention it deserves without compromising the core project. Want me to quote the extras?`
-            });
-        }
-
-        if (hasTimeline) {
-            scripts.push({
-                tone: '⏰ Realistic',
-                text: `I hear you on the timeline. To hit that date without cutting corners on quality, we'd need to either reduce scope or add a rush fee. Want to chat about which approach works best?`
-            });
-        }
-
-        return scripts.slice(0, 3);
-    }
-
-    function copyText(btn, text) {
-        navigator.clipboard.writeText(text).then(() => {
-            btn.textContent = 'Copied!';
-            setTimeout(() => btn.textContent = 'Copy', 1500);
-        });
+        document.getElementById('waitlist-success').classList.remove('hidden');
+        document.getElementById('waitlist-email').value = '';
     }
 
     function animateNumber(el, target) {
@@ -749,80 +1351,25 @@ Thanks! You're the best 🙌`;
         const step = Math.ceil(target / 30);
         const timer = setInterval(() => {
             current += step;
-            if (current >= target) {
-                current = target;
-                clearInterval(timer);
-            }
+            if (current >= target) { current = target; clearInterval(timer); }
             el.textContent = current;
         }, 30);
     }
 
-    function updateDashboard() {
-        const total = scopeLog.length;
-        const creepCount = scopeLog.filter(e => e.score >= 40).length;
-        const estCost = creepCount * 450;
-
-        document.getElementById('stat-total').textContent = total;
-        document.getElementById('stat-creep').textContent = creepCount;
-        document.getElementById('stat-cost').textContent = '$' + estCost.toLocaleString();
-
-        const patterns = Object.values(categoryTotals).filter(v => v > 0).length;
-        document.getElementById('stat-patterns').textContent = patterns;
-
-        // Category bars
-        const maxCat = Math.max(...Object.values(categoryTotals), 1);
-        for (const [cat, count] of Object.entries(categoryTotals)) {
-            const pct = Math.round((count / maxCat) * 100);
-            const bar = document.getElementById('bar-' + cat);
-            const label = document.getElementById('pct-' + cat);
-            if (bar) bar.style.width = pct + '%';
-            if (label) label.textContent = count > 0 ? pct + '%' : '0%';
+    // --- Contract auto-parse on input ---
+    document.getElementById('contract-input').addEventListener('input', function() {
+        const text = this.value.trim();
+        if (text.length > 50) {
+            const parsed = parseContract(text);
+            showParsedContract(parsed);
+        } else {
+            document.getElementById('parsed-contract').classList.add('hidden');
         }
-    }
+    });
 
-    function updateScopeLog() {
-        const logEl = document.getElementById('scope-log');
-        const emptyEl = document.getElementById('log-empty');
-        const countEl = document.getElementById('log-count');
-
-        countEl.textContent = scopeLog.length + ' analyses';
-
-        if (scopeLog.length === 0) {
-            emptyEl.classList.remove('hidden');
-            logEl.innerHTML = '';
-            return;
-        }
-
-        emptyEl.classList.add('hidden');
-        logEl.innerHTML = scopeLog.slice(0, 20).map(entry => {
-            const date = new Date(entry.date);
-            const timeStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-            const scoreColor = entry.score >= 70 ? 'text-red-400' : entry.score >= 40 ? 'text-yellow-400' : 'text-green-400';
-            return `
-                <div class="flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2">
-                    <span class="text-xs text-gray-500 w-28 shrink-0">${timeStr}</span>
-                    <span class="${scoreColor} font-bold text-sm w-8">${entry.score}</span>
-                    <span class="text-xs text-gray-400 flex-1 truncate">${entry.messagePreview}</span>
-                    <div class="flex gap-1">${(entry.categories || []).slice(0, 2).map(c => `<span class="text-[10px] bg-white/10 px-1.5 py-0.5 rounded">${c}</span>`).join('')}</div>
-                </div>`;
-        }).join('');
-    }
-
-    function joinWaitlist(e) {
-        e.preventDefault();
-        const email = document.getElementById('waitlist-email').value;
-        let waitlist = JSON.parse(localStorage.getItem('scopeguard-waitlist') || '[]');
-        if (!waitlist.includes(email)) {
-            waitlist.push(email);
-            localStorage.setItem('scopeguard-waitlist', JSON.stringify(waitlist));
-        }
-        document.getElementById('waitlist-success').classList.remove('hidden');
-        document.getElementById('waitlist-email').value = '';
-    }
-
-    // Init dashboard on load
+    // --- Init ---
     updateDashboard();
-    updateScopeLog();
+    updateHistory();
     </script>
 </body>
 </html>
